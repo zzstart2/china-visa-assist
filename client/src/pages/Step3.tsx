@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVisa } from '../context/VisaContext';
+import { useI18n } from '../i18n/I18nContext';
 import SectionNav from '../components/SectionNav';
 import ChatBubble from '../components/ChatBubble';
 import './Step3.css';
@@ -22,23 +23,14 @@ interface Question {
   prefill?: string;
 }
 
-const SECTIONS = [
-  'Personal Info',
-  'Passport Details',
-  'Travel History',
-  'Accommodation',
-  'Financial Info',
-  'Employment',
-  'Purpose of Visit',
-  'Additional Info',
-  'Declaration',
-];
-
 function Step3() {
   const navigate = useNavigate();
+  const { t, lang } = useI18n();
   const { state, setFormData } = useVisa();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const SECTIONS = Array.from({ length: 9 }, (_, i) => t(`step3.sec.${i}`));
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -47,20 +39,31 @@ function Step3() {
   const [progress, setProgress] = useState<number>(0);
   const [currentSection, setCurrentSection] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // Completed sections are those before current section
-  const completedSections = Array.from({ length: currentSection }, (_, i) => i);
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [userInput, setUserInput] = useState<string>('');
   const [selectOptions, setSelectOptions] = useState<string[]>([]);
   const [dateValue, setDateValue] = useState({ year: '', month: '', day: '' });
 
-  // Scroll to bottom when messages change
+  const completedSections = Array.from({ length: currentSection }, (_, i) => i);
+
+  // Translate a question string based on field name
+  const tQuestion = (field: string, fallback: string) => {
+    const key = `q.${field}`;
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  };
+
+  // Translate select option
+  const tOption = (opt: string) => {
+    const key = `opt.${opt}`;
+    const translated = t(key);
+    return translated === key ? opt : translated;
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Start chat on mount
   useEffect(() => {
     const startChat = async () => {
       if (!state.visaType) {
@@ -77,7 +80,7 @@ function Step3() {
         });
 
         const data = await response.json();
-        
+
         if (data.sessionId) {
           setSessionId(data.sessionId);
           setQuestionIndex(0);
@@ -94,9 +97,7 @@ function Step3() {
   }, []);
 
   const processQuestion = (data: any) => {
-    // Check if done
     if (data.done) {
-      // Store form data in context
       if (data.summary) {
         setFormData(data.summary);
       }
@@ -105,7 +106,6 @@ function Step3() {
       return;
     }
 
-    // Update progress and section
     if (data.progress !== undefined) {
       setProgress(data.progress);
     }
@@ -113,7 +113,6 @@ function Step3() {
       setCurrentSection(data.section);
     }
 
-    // Check for OCR prefill
     let prefill: string | undefined;
     if (data.field && state.extractedPassport) {
       const fieldMap: Record<string, string> = {
@@ -126,16 +125,16 @@ function Step3() {
       prefill = fieldMap[data.field];
     }
 
-    // Set prefilled value if available
     if (prefill) {
       setUserInput(prefill);
     } else {
       setUserInput('');
     }
 
-    // Set question
+    const translatedQ = tQuestion(data.field, data.question);
+
     const question: Question = {
-      question: data.question,
+      question: translatedQ,
       type: data.type || 'text',
       options: data.options,
       field: data.field || '',
@@ -146,25 +145,18 @@ function Step3() {
     };
     setCurrentQuestion(question);
 
-    // Set select options
     if (data.options) {
       setSelectOptions(data.options);
     }
 
-    // Reset date
     setDateValue({ year: '', month: '', day: '' });
 
-    // Add AI message
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
       setMessages(prev => [
         ...prev,
-        {
-          role: 'ai',
-          content: data.question,
-          timestamp: new Date(),
-        },
+        { role: 'ai', content: translatedQ, timestamp: new Date() },
       ]);
     }, 500);
   };
@@ -172,13 +164,11 @@ function Step3() {
   const handleSubmit = async (answer: string) => {
     if (!sessionId || isLoading) return;
 
-    // Add user message
     setMessages(prev => [
       ...prev,
       { role: 'user', content: answer, timestamp: new Date() },
     ]);
 
-    // Clear current question while waiting for response
     setCurrentQuestion(null);
     setIsLoading(true);
 
@@ -186,30 +176,17 @@ function Step3() {
       const response = await fetch('http://localhost:3001/api/chat/reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          answer,
-          questionIndex,
-        }),
+        body: JSON.stringify({ sessionId, answer, questionIndex }),
       });
 
       const data = await response.json();
-      
-      // Update question index
       setQuestionIndex(prev => prev + 1);
 
-      // Check for validation error
       if (data.validation) {
-        // Show validation error as AI message
         setMessages(prev => [
           ...prev,
-          {
-            role: 'ai',
-            content: `⚠️ ${data.validation.error}`,
-            timestamp: new Date(),
-          },
+          { role: 'ai', content: `⚠️ ${data.validation.error}`, timestamp: new Date() },
         ]);
-        // Restore the question for retry
         setCurrentQuestion(data.question || currentQuestion);
         setIsLoading(false);
         return;
@@ -218,6 +195,7 @@ function Step3() {
       processQuestion(data);
     } catch (error) {
       console.error('Failed to submit answer:', error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -248,7 +226,6 @@ function Step3() {
     navigate('/step/4');
   };
 
-  // Check if all questions are done
   const isComplete = !currentQuestion && messages.length > 0 && progress === 100;
 
   return (
@@ -258,7 +235,7 @@ function Step3() {
           <div className="sp-bar">
             <div className="sp-fill" style={{ width: `${progress}%` }} />
           </div>
-          <span className="sp-text">{progress}% Complete</span>
+          <span className="sp-text">{t('step3.progress', { pct: String(progress) })}</span>
         </div>
       </div>
 
@@ -282,7 +259,7 @@ function Step3() {
                   timestamp={msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 />
               ))}
-              
+
               {isTyping && (
                 <div className="typing-indicator">
                   <span className="typing-dot"></span>
@@ -292,19 +269,15 @@ function Step3() {
               )}
 
               {isLoading && !currentQuestion && !isTyping && (
-                <div className="loading-indicator">
-                  Processing...
-                </div>
+                <div className="loading-indicator">{t('step3.processing')}</div>
               )}
 
               {currentQuestion && !isTyping && (
                 <div className="question-input-area">
                   {currentQuestion.prefill && (
-                    <div className="prefill-notice">
-                      Pre-filled from your passport. Please confirm or edit.
-                    </div>
+                    <div className="prefill-notice">{t('step3.prefill')}</div>
                   )}
-                  
+
                   {currentQuestion.type === 'text' && (
                     <div className="text-input-group">
                       <input
@@ -313,15 +286,15 @@ function Step3() {
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="Type your answer..."
+                        placeholder={t('step3.placeholder')}
                         className="chat-input"
                       />
-                      <button 
+                      <button
                         onClick={handleTextSubmit}
                         disabled={!userInput.trim() || isLoading}
                         className="send-button"
                       >
-                        Send
+                        {t('step3.send')}
                       </button>
                     </div>
                   )}
@@ -335,7 +308,7 @@ function Step3() {
                           disabled={isLoading}
                           className="option-button"
                         >
-                          {opt}
+                          {tOption(opt)}
                         </button>
                       ))}
                     </div>
@@ -382,7 +355,7 @@ function Step3() {
                         disabled={!dateValue.year || !dateValue.month || !dateValue.day || isLoading}
                         className="send-button"
                       >
-                        Confirm
+                        {t('step3.confirm')}
                       </button>
                     </div>
                   )}
@@ -391,11 +364,9 @@ function Step3() {
 
               {isComplete && (
                 <div className="complete-section">
-                  <div className="complete-message">
-                    🎉 All done! You've completed the form.
-                  </div>
+                  <div className="complete-message">{t('step3.complete')}</div>
                   <button onClick={handleComplete} className="review-button">
-                    Review Your Application →
+                    {t('step3.continue')}
                   </button>
                 </div>
               )}

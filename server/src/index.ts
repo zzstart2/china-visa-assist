@@ -332,7 +332,7 @@ app.post('/api/chat/start', (req: Request, res: Response) => {
     options: firstQ.options,
     field: firstQ.field,
     section: firstQ.section,
-    progress: 1 / questions.length
+    progress: Math.round(100 / questions.length)
   });
 });
 
@@ -355,9 +355,11 @@ app.post('/api/chat/reply', (req: Request, res: Response) => {
   if (session.currentQuestionIndex >= session.questions.length) {
     // Complete
     return res.json({
+      done: true,
       complete: true,
       totalQuestions: session.questions.length,
-      progress: 1
+      progress: 100,
+      summary: session.answers
     });
   }
   
@@ -368,7 +370,7 @@ app.post('/api/chat/reply', (req: Request, res: Response) => {
     options: nextQ.options,
     field: nextQ.field,
     section: nextQ.section,
-    progress: (session.currentQuestionIndex + 1) / session.questions.length
+    progress: Math.round(((session.currentQuestionIndex + 1) / session.questions.length) * 100)
   });
 });
 
