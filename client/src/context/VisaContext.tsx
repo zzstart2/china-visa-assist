@@ -14,6 +14,7 @@ export interface VisaState {
     expiryDate?: string;
   } | null;
   uploadedFiles: Record<string, File[]>;
+  formData: Record<string, string>;
 }
 
 interface VisaContextType {
@@ -23,6 +24,7 @@ interface VisaContextType {
   setVisaDuration: (duration: string) => void;
   setExtractedPassport: (data: VisaState['extractedPassport']) => void;
   setUploadedFiles: (files: Record<string, File[]>) => void;
+  setFormData: (data: Record<string, string>) => void;
 }
 
 const defaultState: VisaState = {
@@ -31,6 +33,7 @@ const defaultState: VisaState = {
   visaDuration: '',
   extractedPassport: null,
   uploadedFiles: {},
+  formData: {},
 };
 
 const VisaContext = createContext<VisaContextType | undefined>(undefined);
@@ -46,6 +49,9 @@ export function VisaProvider({ children }: { children: ReactNode }) {
   const setUploadedFiles = (uploadedFiles: Record<string, File[]>) => 
     setState(s => ({ ...s, uploadedFiles }));
 
+  const setFormData = (formData: Record<string, string>) => 
+    setState(s => ({ ...s, formData }));
+
   return (
     <VisaContext.Provider value={{
       state,
@@ -54,6 +60,7 @@ export function VisaProvider({ children }: { children: ReactNode }) {
       setVisaDuration,
       setExtractedPassport,
       setUploadedFiles,
+      setFormData,
     }}>
       {children}
     </VisaContext.Provider>
