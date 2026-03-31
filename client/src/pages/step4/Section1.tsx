@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import '../components/FormField.css';
 
 const COUNTRIES = [
   'Philippines','China','United States','Japan','South Korea','Singapore',
