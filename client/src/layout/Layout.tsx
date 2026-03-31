@@ -1,25 +1,27 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext';
 import './Layout.css';
-
-const steps = [
-  { path: '/step/1', label: 'Visa Type' },
-  { path: '/step/2', label: 'Upload Docs' },
-  { path: '/step/3', label: 'Fill Form' },
-  { path: '/step/4', label: 'Review' },
-  { path: '/step/5', label: 'Export' },
-];
 
 function Layout() {
   const location = useLocation();
+  const { t, toggleLang } = useI18n();
+
+  const steps = [
+    { path: '/step/1', label: t('step.1') },
+    { path: '/step/2', label: t('step.2') },
+    { path: '/step/3', label: t('step.3') },
+    { path: '/step/4', label: t('step.4') },
+    { path: '/step/5', label: t('step.5') },
+  ];
   
   const currentStepIndex = steps.findIndex(s => s.path === location.pathname);
-  
   const isStepPage = location.pathname.startsWith('/step/');
 
   return (
     <div className="layout">
       <header className="header">
-        <h1 className="title">China Visa Application Assistant</h1>
+        <h1 className="title">{t('app.title')}</h1>
+        <button className="lang-toggle" onClick={toggleLang}>{t('app.lang.toggle')}</button>
       </header>
       
       {isStepPage && (

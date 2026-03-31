@@ -1,35 +1,37 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext';
 import './Home.css';
 
 function Home() {
+  const { t } = useI18n();
   return (
     <div className="home">
       <div className="welcome-card">
         <div className="welcome-icon">🇨🇳</div>
-        <h2>Welcome to China Visa Application Assistant</h2>
-        <p>Let us help you prepare your visa application documents efficiently.</p>
+        <h2>{t('home.title')}</h2>
+        <p>{t('home.desc')}</p>
         
         <div className="features">
           <div className="feature">
             <span className="feature-icon">📋</span>
-            <span>Step-by-step guidance</span>
+            <span>{t('home.step1.desc')}</span>
           </div>
           <div className="feature">
             <span className="feature-icon">📄</span>
-            <span>Document upload support</span>
+            <span>{t('home.step2.desc')}</span>
           </div>
           <div className="feature">
             <span className="feature-icon">💬</span>
-            <span>Interactive form filling</span>
+            <span>{t('home.step3.desc')}</span>
           </div>
           <div className="feature">
             <span className="feature-icon">✅</span>
-            <span>Review before submission</span>
+            <span>{t('home.step4.desc')}</span>
           </div>
         </div>
         
         <Link to="/step/1" className="start-button">
-          Start Application
+          {t('home.start')}
         </Link>
       </div>
     </div>

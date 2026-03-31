@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVisa } from '../context/VisaContext';
+import { useI18n } from '../i18n/I18nContext';
 import Section1 from './step4/Section1';
 import Section2 from './step4/Section2';
 import Section3 from './step4/Section3';
@@ -12,20 +13,18 @@ import Section8 from './step4/Section8';
 import Section9 from './step4/Section9';
 import './Step4.css';
 
-const SECTION_NAMES = [
-  'Personal Information','Type of Visa','Work Information','Education',
-  'Family Information','Travel Information','Previous Travel','Other Information','Declaration'
-];
-
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function Step4() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { state, setFormData } = useVisa();
   const passportInfo = state.extractedPassport;
   const [currentSection, setCurrentSection] = useState(0);
   const [data, setData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+
+  const SECTION_NAMES = Array.from({length:9},(_,i)=>t(`section.${i+1}`));
 
   useEffect(() => {
     fetch(`${API}/api/summary`)
@@ -59,12 +58,12 @@ export default function Step4() {
     <Section9 data={data} onChange={handleChange} />,
   ];
 
-  if (loading) return <div className="step4-loading">Loading application data...</div>;
+  if (loading) return <div className="step4-loading">{t('step4.loading')}</div>;
 
   return (
     <div className="step4">
       <div className="step4-nav">
-        <h4>Sections</h4>
+        <h4>{t('step4.sections')}</h4>
         {SECTION_NAMES.map((name, i) => (
           <button key={i}
             className={`nav-item ${i === currentSection ? 'active' : ''} ${i < currentSection ? 'completed' : ''}`}
@@ -76,20 +75,20 @@ export default function Step4() {
       </div>
 
       <div className="step4-content">
-        <div className="section-progress">Section {currentSection + 1} of 9</div>
+        <div className="section-progress">{t('step4.sectionOf', {current: String(currentSection+1), total: '9'})}</div>
         {sections[currentSection]}
 
         <div className="step4-actions">
           <button className="btn-secondary" disabled={currentSection === 0}
-            onClick={() => setCurrentSection(currentSection - 1)}>← Previous</button>
+            onClick={() => setCurrentSection(currentSection - 1)}>{t('step4.previous')}</button>
 
           {currentSection < 8 ? (
             <button className="btn-primary"
-              onClick={() => setCurrentSection(currentSection + 1)}>Next →</button>
+              onClick={() => setCurrentSection(currentSection + 1)}>{t('step4.next')}</button>
           ) : (
             <button className="btn-primary btn-submit"
               disabled={!data.declarationAgreed}
-              onClick={() => navigate('/step/5')}>Submit & Export →</button>
+              onClick={() => navigate('/step/5')}>{t('step4.submit')}</button>
           )}
         </div>
       </div>
