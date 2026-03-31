@@ -192,27 +192,57 @@ interface ChatSession {
 
 const chatSessions: Record<string, ChatSession> = {};
 
-// M Visa Questions (12 questions)
+// M Visa Questions (40 questions)
 const mVisaQuestions = [
+  // Section 0: Personal Info
+  { question: "What is your family name (as in passport)?", type: 'text' as const, field: 'familyName', section: 0 },
+  { question: "What is/are your given name(s)?", type: 'text' as const, field: 'givenName', section: 0 },
+  { question: "Do you have a Chinese name? (leave blank if none)", type: 'text' as const, field: 'chineseName', section: 0 },
+  { question: "What is your gender?", type: 'select' as const, options: ['Male', 'Female'], field: 'gender', section: 0 },
+  { question: "What is your date of birth?", type: 'date' as const, field: 'dateOfBirth', section: 0 },
+  { question: "What is your country of birth?", type: 'text' as const, field: 'birthCountry', section: 0 },
+  { question: "What is your province/state of birth?", type: 'text' as const, field: 'birthProvince', section: 0 },
+  { question: "What is your city of birth?", type: 'text' as const, field: 'birthCity', section: 0 },
+  { question: "What is your marital status?", type: 'select' as const, options: ['Married', 'Single', 'Divorced', 'Widowed'], field: 'maritalStatus', section: 0 },
+  // Section 1: Passport
+  { question: "What is your passport number?", type: 'text' as const, field: 'passportNumber', section: 1 },
+  { question: "What type of passport do you have?", type: 'select' as const, options: ['Ordinary', 'Service', 'Diplomatic'], field: 'passportType', section: 1 },
+  { question: "What country issued your passport?", type: 'text' as const, field: 'issuingCountry', section: 1 },
+  { question: "When was your passport issued?", type: 'date' as const, field: 'passportIssueDate', section: 1 },
+  { question: "When does your passport expire?", type: 'date' as const, field: 'passportExpiryDate', section: 1 },
+  // Section 2: Travel
+  { question: "What is the purpose of your visit to China?", type: 'select' as const, options: ['Business', 'Trade', 'Exhibition', 'Other'], field: 'purposeOfVisit', section: 2 },
+  { question: "What is your intended date of entry into China?", type: 'date' as const, field: 'intendedEntryDate', section: 2 },
+  { question: "What is your intended port of entry into China?", type: 'select' as const, options: ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Other'], field: 'intendedEntryPort', section: 2 },
+  { question: "How many days do you plan to stay in China?", type: 'select' as const, options: ['30', '60', '90', '180'], field: 'durationOfStay', section: 2 },
+  { question: "How many entries do you need?", type: 'select' as const, options: ['Single Entry', 'Double Entry', 'Multiple Entry'], field: 'numberOfEntries', section: 2 },
+  // Section 3: Contact Info (existing)
   { question: "What is your current residential address?", type: 'text' as const, field: 'currentAddress', section: 3 },
   { question: "What is your phone number?", type: 'text' as const, field: 'phone', section: 3 },
   { question: "What is your email address?", type: 'text' as const, field: 'email', section: 3 },
+  // Section 4: Education & Work (existing)
   { question: "What is your highest education level?", type: 'select' as const, options: ['High School', 'Bachelor', 'Master', 'Doctorate'], field: 'education', section: 4 },
   { question: "What is your current occupation?", type: 'text' as const, field: 'occupation', section: 4 },
   { question: "What is your position/job title?", type: 'text' as const, field: 'position', section: 4 },
   { question: "What is your employer's name?", type: 'text' as const, field: 'employerName', section: 4 },
   { question: "What is your employer's address?", type: 'text' as const, field: 'employerAddress', section: 4 },
   { question: "What is your employer's phone number?", type: 'text' as const, field: 'employerPhone', section: 4 },
+  // Section 5: Previous China Visit (existing + new previousChinaDate)
   { question: "Have you previously visited China?", type: 'select' as const, options: ['Yes', 'No'], field: 'previousChinaVisit', section: 5 },
+  { question: "When did you last visit China? (if applicable)", type: 'date' as const, field: 'previousChinaDate', section: 5 },
+  // Section 6: Invitation (existing)
   { question: "What is the name of the inviting company in China?", type: 'text' as const, field: 'inviterName', section: 6 },
   { question: "What is the inviting company's address?", type: 'text' as const, field: 'inviterAddress', section: 6 },
   { question: "What is the inviting company's phone number?", type: 'text' as const, field: 'inviterPhone', section: 6 },
+  // Section 7: Accommodation (existing)
   { question: "Hotel name in Shanghai?", type: 'text' as const, field: 'hotelName', section: 7 },
   { question: "Hotel address?", type: 'text' as const, field: 'hotelAddress', section: 7 },
   { question: "Hotel phone?", type: 'text' as const, field: 'hotelPhone', section: 7 },
+  // Section 8: Emergency Contact + Declaration (existing + new)
   { question: "Emergency contact name?", type: 'text' as const, field: 'emergencyName', section: 8 },
   { question: "Relationship to emergency contact?", type: 'text' as const, field: 'emergencyRelationship', section: 8 },
   { question: "Emergency contact phone?", type: 'text' as const, field: 'emergencyPhone', section: 8 },
+  { question: "Do you agree to the declaration that all information provided is true and correct?", type: 'select' as const, options: ['Yes', 'No'], field: 'declarationAgreed', section: 8 },
 ];
 
 // G Visa Questions (12 questions)

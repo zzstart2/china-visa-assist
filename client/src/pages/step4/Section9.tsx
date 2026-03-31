@@ -1,44 +1,44 @@
 import { useState } from 'react';
+import { useI18n } from '../../i18n/I18nContext';
 
 interface Props { data: Record<string, any>; onChange: (field: string, value: any) => void; }
 
-const DECLARATION_TEXT = `I declare that the information I have provided in this application is true and correct to the best of my knowledge and belief. I understand that any false or misleading information may result in the refusal of my visa application or the cancellation of any visa granted. I understand that the consular officer has the final authority to determine whether to issue a visa, the type of visa, validity period, duration of stay, and number of entries. I understand that holding a visa does not guarantee entry into China.`;
-
 export default function Section9({ data, onChange }: Props) {
+  const { t } = useI18n();
   const [agreed, setAgreed] = useState(data.declarationAgreed || false);
 
   return (
     <div className="section-form">
-      <h3>Section 9: Declaration</h3>
+      <h3>{t('s9.title')}</h3>
 
       <fieldset>
-        <legend>9.1 The person who fills in the form</legend>
+        <legend>{t('s9.formFiller')}</legend>
         <div className="radio-group">
           {['Applicant','Representative'].map(v=>(<label key={v}><input type="radio" name="formFiller" value={v}
-            checked={data.formFiller===v} onChange={()=>onChange('formFiller',v)}/> {v === 'Applicant' ? 'Applicant (self)' : 'Person filling on behalf of applicant'}</label>))}
+            checked={data.formFiller===v} onChange={()=>onChange('formFiller',v)}/> {v === 'Applicant' ? t('s9.applicant') : t('s9.representative')}</label>))}
         </div>
         {data.formFiller==='Representative'&&(
           <div className="conditional-fields">
-            <div className="form-row"><label className="required">Representative Name</label>
+            <div className="form-row"><label className="required">{t('s9.repName')}</label>
               <input value={data.repName||''} onChange={e=>onChange('repName',e.target.value)}/></div>
-            <div className="form-row"><label className="required">Relationship to Applicant</label>
+            <div className="form-row"><label className="required">{t('s9.repRelation')}</label>
               <input value={data.repRelation||''} onChange={e=>onChange('repRelation',e.target.value)}/></div>
-            <div className="form-row"><label className="required">Phone</label>
+            <div className="form-row"><label className="required">{t('s9.repPhone')}</label>
               <input value={data.repPhone||''} onChange={e=>onChange('repPhone',e.target.value)}/></div>
           </div>
         )}
       </fieldset>
 
       <fieldset>
-        <legend>Declaration</legend>
+        <legend>{t('s9.declaration')}</legend>
         <div className="declaration-text">
-          <p>{DECLARATION_TEXT}</p>
-          <p><strong>Submission City: MANILA</strong></p>
+          <p>{t('s9.declarationText')}</p>
+          <p><strong>{t('s9.submissionCity')}</strong></p>
         </div>
         <label className="agree-check">
           <input type="checkbox" checked={agreed}
             onChange={e => { setAgreed(e.target.checked); onChange('declarationAgreed', e.target.checked); }} />
-          <strong>I understand and agree with the above.</strong>
+          <strong>{t('s9.agree')}</strong>
         </label>
       </fieldset>
     </div>

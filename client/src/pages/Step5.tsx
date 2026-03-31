@@ -46,7 +46,7 @@ export default function Step5() {
         <div className="summary-grid">
           <div className="summary-item">
             <span className="label">{t('step5.visaType')}</span>
-            <span className="value">(M) Commercial and Trade</span>
+            <span className="value">{t('step5.visaTypeValue')}</span>
           </div>
           <div className="summary-item">
             <span className="label">{t('step5.applicant')}</span>
@@ -58,13 +58,13 @@ export default function Step5() {
           </div>
           <div className="summary-item">
             <span className="label">{t('step5.serviceType')}</span>
-            <span className="value">{formData?.serviceType || 'Normal'}</span>
+            <span className="value">{formData?.serviceType || t('step5.serviceNormal')}</span>
           </div>
         </div>
       </div>
 
       <div className="export-section">
-        <h3>Export</h3>
+        <h3>{t('step5.export')}</h3>
         <div className="export-buttons">
           <button className="btn-export json" onClick={downloadJson}>
             <span className="icon">📄</span>
