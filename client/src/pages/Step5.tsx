@@ -48,11 +48,11 @@ export default function Step5() {
           </div>
           <div className="summary-item">
             <span className="label">Applicant</span>
-            <span className="value">{passportInfo?.familyName || formData?.familyName || 'DELA CRUZ'}, {passportInfo?.givenName || formData?.givenName || 'JUAN'}</span>
+            <span className="value">{formData?.familyName || passportInfo?.name || 'DELA CRUZ'}, {formData?.givenName || 'JUAN'}</span>
           </div>
           <div className="summary-item">
             <span className="label">Passport No.</span>
-            <span className="value">{passportInfo?.passportNo || formData?.passportNumber || 'P1234567A'}</span>
+            <span className="value">{passportInfo?.passportNumber || formData?.passportNumber || 'P1234567A'}</span>
           </div>
           <div className="summary-item">
             <span className="label">Service Type</span>
