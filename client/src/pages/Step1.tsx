@@ -17,10 +17,12 @@ function Step1() {
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Mount only — do NOT depend on [t] or language changes will reset the flow
   useEffect(() => {
     setMessages([{ role: 'ai', content: t('step1.welcome') }]);
     setStep('purpose');
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
