@@ -13,7 +13,7 @@ import Section8 from './step4/Section8';
 import Section9 from './step4/Section9';
 import './Step4.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API = import.meta.env.VITE_API_URL || '';
 
 export default function Step4() {
   const navigate = useNavigate();

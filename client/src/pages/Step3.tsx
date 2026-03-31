@@ -73,7 +73,7 @@ function Step3() {
 
       setIsLoading(true);
       try {
-        const response = await fetch('http://localhost:3001/api/chat/start', {
+        const response = await fetch('/api/chat/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ visaType: state.visaType }),
@@ -173,7 +173,7 @@ function Step3() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/chat/reply', {
+      const response = await fetch('/api/chat/reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, answer, questionIndex }),

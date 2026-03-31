@@ -11,7 +11,7 @@
 
 .step1-header h2 {
   font-size: 1.5rem;
-  color: #1e293b;
+  color: #1e3a5f;
   font-weight: 600;
 }
 
@@ -25,9 +25,7 @@
   background: #f8fafc;
   border-radius: 16px;
   padding: 1.5rem;
-  min-height: 400px;
-  max-height: 500px;
-  overflow-y: auto;
+  min-height: 300px;
   border: 1px solid #e2e8f0;
 }
 
@@ -52,19 +50,39 @@
 }
 
 .option-btn:hover:not(:disabled) {
-  border-color: #1a56db;
+  border-color: #1e40af;
   background: #eff6ff;
   transform: translateX(4px);
 }
 
 .option-btn.selected {
-  border-color: #1a56db;
+  border-color: #1e40af;
   background: #eff6ff;
 }
 
 .option-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.step1-container .continue-btn {
+  padding: 1rem 2.5rem;
+  background: #1e40af;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.step1-container .continue-btn:hover {
+  background: #1e3a8a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
 }
 
 .typing-indicator {
@@ -77,6 +95,7 @@
 
 .typing-indicator span:first-child {
   font-size: 1.5rem;
+  color: #1e40af;
 }
 
 .typing-dots {
@@ -87,7 +106,7 @@
 .typing-dots span {
   width: 8px;
   height: 8px;
-  background: #94a3b8;
+  background: #93c5fd;
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out;
 }
@@ -117,15 +136,15 @@
 
 .required-docs-card {
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #dbeafe;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
 }
 
 .required-docs-card h3 {
   font-size: 1.125rem;
-  color: #1e293b;
+  color: #1e3a5f;
   margin-bottom: 1rem;
   font-weight: 600;
 }
@@ -153,9 +172,12 @@
 }
 
 .required-docs-card li.mandatory::before {
-  content: '🔴 ';
+  content: '\2022  ';
+  color: #dc2626;
+  font-weight: bold;
 }
 
 .required-docs-card li.optional::before {
-  content: '⚪ ';
+  content: '\2022  ';
+  color: #94a3b8;
 }

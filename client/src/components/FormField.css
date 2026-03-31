@@ -34,8 +34,8 @@
 .ff-select:focus,
 .ff-textarea:focus {
   outline: none;
-  border-color: #1a56db;
-  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+  border-color: #1e40af;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
 
 .ff-input:disabled,
@@ -81,7 +81,7 @@
 }
 
 .ff-radio-input:checked + .ff-radio-custom {
-  border-color: #1a56db;
+  border-color: #1e40af;
 }
 
 .ff-radio-input:checked + .ff-radio-custom::after {
@@ -92,7 +92,7 @@
   transform: translate(-50%, -50%);
   width: 10px;
   height: 10px;
-  background: #1a56db;
+  background: #1e40af;
   border-radius: 50%;
 }
 
@@ -150,12 +150,12 @@
 }
 
 .ff-checkbox-input:checked + .ff-checkbox-custom {
-  background: #1a56db;
-  border-color: #1a56db;
+  background: #1e40af;
+  border-color: #1e40af;
 }
 
 .ff-checkbox-input:checked + .ff-checkbox-custom::after {
-  content: '✓';
+  content: '\2713';
   position: absolute;
   top: 50%;
   left: 50%;

@@ -7,10 +7,10 @@
 }
 
 .header {
-  background: linear-gradient(135deg, #1a56db 0%, #2563eb 100%);
+  background: #1e3a5f;
   color: white;
-  padding: 1.25rem 2rem;
-  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.15);
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 8px rgba(30, 58, 95, 0.15);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -18,14 +18,14 @@
 
 .title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
 .lang-toggle {
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
   color: #fff;
   padding: 0.4rem 1rem;
   border-radius: 6px;
@@ -34,15 +34,16 @@
   font-weight: 600;
   transition: all 0.15s;
 }
+
 .lang-toggle:hover {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.25);
 }
 
 .step-nav {
   display: flex;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2rem;
   background: white;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -51,45 +52,47 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
+  padding: 0.625rem 1rem;
   border-radius: 8px;
   transition: all 0.2s ease;
+  color: #94a3b8;
 }
 
 .step-item.completed {
-  background: #ecfdf5;
-  color: #059669;
+  background: #f0fdf4;
+  color: #16a34a;
 }
 
 .step-item.current {
-  background: #eff6ff;
-  color: #1a56db;
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .step-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   background: #e2e8f0;
+  color: #94a3b8;
 }
 
 .step-item.completed .step-icon {
-  background: #059669;
+  background: #16a34a;
   color: white;
 }
 
 .step-item.current .step-icon {
-  background: #1a56db;
+  background: #1e40af;
   color: white;
 }
 
 .step-label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 
@@ -107,11 +110,11 @@
     flex-wrap: wrap;
     gap: 0.5rem;
   }
-  
+
   .step-item {
     padding: 0.5rem 0.75rem;
   }
-  
+
   .step-label {
     font-size: 0.75rem;
   }

@@ -5,7 +5,8 @@
   padding: 1.5rem;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
 }
 
 .sp-step {
@@ -19,11 +20,11 @@
 }
 
 .sp-step.completed {
-  background: #ecfdf5;
+  background: #f0fdf4;
 }
 
 .sp-step.current {
-  background: #eff6ff;
+  background: #dbeafe;
 }
 
 .sp-icon {
@@ -40,12 +41,12 @@
 }
 
 .sp-step.completed .sp-icon {
-  background: #059669;
+  background: #16a34a;
   color: white;
 }
 
 .sp-step.current .sp-icon {
-  background: #1a56db;
+  background: #1e40af;
   color: white;
 }
 
@@ -57,5 +58,5 @@
 
 .sp-step.completed .sp-label,
 .sp-step.current .sp-label {
-  color: #1a56db;
+  color: #1e40af;
 }

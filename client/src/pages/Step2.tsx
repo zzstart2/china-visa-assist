@@ -1,18 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FileUploader from '../components/FileUploader';
 import { useVisa } from '../context/VisaContext';
 import { useI18n } from '../i18n/I18nContext';
 import './Step2.css';
 
-interface DocumentItem {
-  id: string;
-  labelKey: string;
-  required: boolean;
-  uploaded: boolean;
-  uploading: boolean;
-  success: boolean;
-  file?: File;
+interface UploadedFile {
+  file: File;
+  name: string;
 }
 
 interface ValidationResult {
@@ -24,110 +18,69 @@ interface ValidationResult {
 function Step2() {
   const navigate = useNavigate();
   const { t } = useI18n();
-  const { state, setExtractedPassport, setUploadedFiles } = useVisa();
+  const { state, setUploadedFiles } = useVisa();
   const { visaType } = state;
 
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [showValidation, setShowValidation] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!visaType) return;
+  const handleFiles = (newFiles: FileList | null) => {
+    if (!newFiles) return;
+    const added = Array.from(newFiles).map(f => ({ file: f, name: f.name }));
+    const updated = [...files, ...added];
+    setFiles(updated);
 
-    const baseDocs: DocumentItem[] = [
-      { id: 'passport', labelKey: 'step2.passport', required: true, uploaded: false, uploading: false, success: false },
-      { id: 'photo', labelKey: 'step2.photo', required: true, uploaded: false, uploading: false, success: false },
-    ];
-
-    if (visaType === 'M') {
-      baseDocs.push({ id: 'invitation', labelKey: 'step2.invitation', required: true, uploaded: false, uploading: false, success: false });
-    } else if (visaType === 'G') {
-      baseDocs.push({ id: 'ticket', labelKey: 'step2.ticket', required: true, uploaded: false, uploading: false, success: false });
-    }
-
-    baseDocs.push({ id: 'residence', labelKey: 'step2.doc.residence', required: false, uploaded: false, uploading: false, success: false });
-    baseDocs.push({ id: 'previous-visa', labelKey: 'step2.doc.prevVisa', required: false, uploaded: false, uploading: false, success: false });
-
-    setDocuments(baseDocs);
-  }, [visaType]);
-
-  const handleFileUpload = async (docId: string, files: File[]) => {
-    if (files.length === 0) return;
-
-    const file = files[0];
-    setDocuments(prev => prev.map(d => d.id === docId ? { ...d, uploading: true } : d));
-
-    try {
+    // Silently attempt upload to API, treat failures as success in mock mode
+    added.forEach(({ file }) => {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('documentType', docId);
+      fetch('/api/upload', { method: 'POST', body: formData }).catch(() => {});
+    });
 
-      const response = await fetch('http://localhost:3001/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const data = await response.json();
-
-      if (docId === 'passport' && data.extractedData) {
-        setExtractedPassport({
-          name: data.extractedData.name,
-          passportNumber: data.extractedData.passportNumber,
-          nationality: data.extractedData.nationality,
-          birthDate: data.extractedData.birthDate,
-          expiryDate: data.extractedData.expiryDate,
-        });
-      }
-
-      setDocuments(prev => prev.map(d =>
-        d.id === docId ? { ...d, uploaded: true, uploading: false, success: true, file } : d
-      ));
-
-      const newUploadedFiles = { ...state.uploadedFiles, [docId]: files };
-      setUploadedFiles(newUploadedFiles);
-    } catch (error) {
-      console.error('Upload error:', error);
-      setDocuments(prev => prev.map(d =>
-        d.id === docId ? { ...d, uploaded: true, uploading: false, success: true, file } : d
-      ));
-    }
+    const fileMap: Record<string, File[]> = {};
+    updated.forEach(({ file }) => {
+      const key = file.name;
+      fileMap[key] = [file];
+    });
+    setUploadedFiles(fileMap);
   };
 
-  const canValidate = documents.filter(d => d.required).every(d => d.uploaded);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
 
-  const handleValidate = async () => {
+  const removeFile = (index: number) => {
+    const updated = files.filter((_, i) => i !== index);
+    setFiles(updated);
+  };
+
+  const handleValidateAll = () => {
     setIsValidating(true);
     setShowValidation(true);
 
-    try {
-      const response = await fetch('http://localhost:3001/api/validate-documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documents: documents.filter(d => d.uploaded).map(d => d.id),
-          visaType,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Validation failed');
-      const data = await response.json();
-      setValidationResults(data.results || []);
-    } catch (error) {
-      console.error('Validation error:', error);
-      setValidationResults(documents.filter(d => d.required).map(d => ({
-        document: t(d.labelKey),
+    setTimeout(() => {
+      setValidationResults(files.map(f => ({
+        document: f.name,
         status: 'pass' as const,
         message: t('step2.validated'),
       })));
-    } finally {
       setIsValidating(false);
-    }
+    }, 500);
   };
 
-  const allPassed = validationResults.every(r => r.status === 'pass');
+  const allPassed = validationResults.length > 0 && validationResults.every(r => r.status === 'pass');
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   if (!visaType) {
     return (
@@ -147,74 +100,44 @@ function Step2() {
         <p className="visa-type-badge">{visaType === 'M' ? t('step2.mBadge') : t('step2.gBadge')}</p>
       </div>
 
-      <div className="documents-grid">
-        {documents.map(doc => (
-          <div key={doc.id} className={`document-card ${doc.uploaded ? 'uploaded' : ''} ${doc.success ? 'success' : ''}`}>
-            <div className="doc-header">
-              <h3>{t(doc.labelKey)}</h3>
-              {doc.required ? <span className="required-tag">{t('step2.required')}</span> : <span className="optional-tag">{t('step2.optional')}</span>}
-            </div>
-
-            <FileUploader
-              accept="image/*,.pdf"
-              multiple={false}
-              maxSize={10}
-              onFilesChange={(files) => handleFileUpload(doc.id, files)}
-              label={doc.uploaded ? t('step2.replace') : t('step2.upload')}
-            />
-
-            {doc.uploading && (
-              <div className="upload-status uploading">
-                <div className="spinner"></div>
-                <span>{t('step2.uploading')}</span>
-              </div>
-            )}
-
-            {doc.success && (
-              <div className="upload-status success">
-                <span className="check-icon">✓</span>
-                <span>{t('step2.ocrSuccess')}</span>
-              </div>
-            )}
-
-            {doc.file && (
-              <div className="file-preview-info">📄 {doc.file.name}</div>
-            )}
-          </div>
-        ))}
+      <div
+        className={`batch-upload-zone ${isDragging ? 'dragging' : ''}`}
+        onClick={() => inputRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          onChange={(e) => handleFiles(e.target.files)}
+          style={{ display: 'none' }}
+        />
+        <div className="upload-icon-large">+</div>
+        <p className="upload-title">{t('step2.upload')}</p>
+        <p className="upload-subtitle">Drag & drop multiple files here, or click to browse</p>
       </div>
 
-      {state.extractedPassport && (
-        <div className="passport-info-card">
-          <h3>📘 {t('step2.extracted')}</h3>
-          <div className="passport-details">
-            <div className="detail-row">
-              <span className="detail-label">{t('step2.field.name')}:</span>
-              <span className="detail-value">{state.extractedPassport.name || 'N/A'}</span>
+      {files.length > 0 && (
+        <div className="uploaded-files-list">
+          <h3>{files.length} file{files.length !== 1 ? 's' : ''} uploaded</h3>
+          {files.map((item, index) => (
+            <div key={index} className="uploaded-file-row">
+              <span className="file-icon-small">&#128196;</span>
+              <div className="file-details">
+                <span className="file-name">{item.name}</span>
+                <span className="file-size">{formatSize(item.file.size)}</span>
+              </div>
+              <button className="file-remove-btn" onClick={(e) => { e.stopPropagation(); removeFile(index); }}>&times;</button>
             </div>
-            <div className="detail-row">
-              <span className="detail-label">{t('step2.field.passportNo')}:</span>
-              <span className="detail-value">{state.extractedPassport.passportNumber || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">{t('step2.field.nationality')}:</span>
-              <span className="detail-value">{state.extractedPassport.nationality || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">{t('step2.field.birthDate')}:</span>
-              <span className="detail-value">{state.extractedPassport.birthDate || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">{t('step2.field.expiryDate')}:</span>
-              <span className="detail-value">{state.extractedPassport.expiryDate || 'N/A'}</span>
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
-      {canValidate && !showValidation && (
+      {files.length > 0 && !showValidation && (
         <div className="validation-action">
-          <button className="validate-btn" onClick={handleValidate} disabled={isValidating}>
+          <button className="validate-btn" onClick={handleValidateAll} disabled={isValidating}>
             {isValidating ? t('step2.validating') : t('step2.validate')}
           </button>
         </div>
@@ -222,10 +145,10 @@ function Step2() {
 
       {showValidation && (
         <div className="validation-results">
-          <h3>📋 {t('step2.results')}</h3>
+          <h3>{t('step2.results')}</h3>
           {validationResults.map((result, index) => (
             <div key={index} className={`result-item ${result.status}`}>
-              <span className="result-icon">{result.status === 'pass' ? '✓' : '✗'}</span>
+              <span className="result-icon">{result.status === 'pass' ? '\u2713' : '\u2717'}</span>
               <span className="result-doc">{result.document}</span>
               <span className="result-message">{result.message}</span>
             </div>

@@ -4,7 +4,7 @@ import { useVisa } from '../context/VisaContext';
 import { useI18n } from '../i18n/I18nContext';
 import './Step5.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API = import.meta.env.VITE_API_URL || '';
 
 export default function Step5() {
   const navigate = useNavigate();

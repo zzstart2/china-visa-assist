@@ -22,7 +22,7 @@
 }
 
 .chat-bubble.ai .bubble-avatar {
-  background: #eff6ff;
+  background: #dbeafe;
 }
 
 .chat-bubble.user .bubble-avatar {
@@ -50,7 +50,7 @@
 }
 
 .chat-bubble.user .bubble-message {
-  background: #1a56db;
+  background: #1e40af;
   border-radius: 12px 12px 0 12px;
   color: white;
 }

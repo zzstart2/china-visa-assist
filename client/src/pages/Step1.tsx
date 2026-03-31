@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ChatBubble from '../components/ChatBubble';
 import { useVisa } from '../context/VisaContext';
@@ -15,7 +15,6 @@ function Step1() {
   const [messages, setMessages] = useState<{role: 'ai' | 'user', content: string}[]>([]);
   const [step, setStep] = useState<Step>('purpose');
   const [isTyping, setIsTyping] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Mount only — do NOT depend on [t] or language changes will reset the flow
   useEffect(() => {
@@ -24,18 +23,10 @@ function Step1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
-
   const handleSelect = (userLabel: string, aiContent: string, nextStep: Step, action?: () => void) => {
-    // Add user selection
     setMessages(prev => [...prev, { role: 'user', content: userLabel }]);
-    
-    // Execute any state updates
     if (action) action();
-    
-    // Add AI response after delay
+
     setIsTyping(true);
     setTimeout(() => {
       setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
@@ -50,7 +41,7 @@ function Step1() {
 
   const getOptions = () => {
     if (isTyping) return null;
-    
+
     if (step === 'purpose') {
       return (
         <div className="options-container">
@@ -61,7 +52,7 @@ function Step1() {
         </div>
       );
     }
-    
+
     if (step === 'entry') {
       const isM = state.visaType === 'M';
       if (isM) {
@@ -82,15 +73,15 @@ function Step1() {
         );
       }
     }
-    
+
     if (step === 'result') {
       return (
         <div className="options-container">
-          <button className="option-btn" onClick={handleContinue}>{t('step1.continue')}</button>
+          <button className="continue-btn" onClick={handleContinue}>{t('step1.continue')}</button>
         </div>
       );
     }
-    
+
     return null;
   };
 
@@ -109,13 +100,12 @@ function Step1() {
       <div className="chat-container">
         <div className="chat-messages">
           {messages.map((msg, i) => <ChatBubble key={i} role={msg.role} content={msg.content} />)}
-          {isTyping && <div className="typing-indicator"><span>🤖</span><div className="typing-dots"><span></span><span></span><span></span></div></div>}
+          {isTyping && <div className="typing-indicator"><span>...</span><div className="typing-dots"><span></span><span></span><span></span></div></div>}
           {getOptions()}
-          <div ref={chatEndRef} />
         </div>
         {state.visaType && (
           <div className="required-docs-card">
-            <h3>📋 {t('step1.materials')}</h3>
+            <h3>{t('step1.materials')}</h3>
             <ul>{getDocs().map((doc, i) => <li key={i} className={i < 3 ? 'mandatory' : 'optional'}>{doc}</li>)}</ul>
           </div>
         )}
