@@ -5,182 +5,116 @@ import { useVisa } from '../context/VisaContext';
 import { useI18n } from '../i18n/I18nContext';
 import './Step1.css';
 
-interface Option {
-  label: string;
-  value: string;
-  action?: () => void;
-}
-
-interface ChatMessage {
-  role: 'ai' | 'user';
-  content: string;
-  showOptions?: boolean;
-  options?: Option[];
-}
+type Step = 'purpose' | 'entry' | 'result';
 
 function Step1() {
   const navigate = useNavigate();
   const { t } = useI18n();
   const { setVisaType, setVisaEntry, setVisaDuration, state } = useVisa();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentOptions, setCurrentOptions] = useState<Option[]>([]);
+  const [messages, setMessages] = useState<{role: 'ai' | 'user', content: string}[]>([]);
+  const [step, setStep] = useState<Step>('purpose');
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const initialMessage: ChatMessage = {
-      role: 'ai',
-      content: t('step1.welcome'),
-      showOptions: true,
-      options: [
-        { label: t('step1.business'), value: 'business', action: () => handleBusinessSelect() },
-        { label: t('step1.transit'), value: 'transit', action: () => handleTransitSelect() },
-        { label: t('step1.tourism'), value: 'tourism', action: () => handleTourismSelect() },
-        { label: t('step1.other'), value: 'other', action: () => handleTourismSelect() },
-      ],
-    };
-    setMessages([initialMessage]);
-    setCurrentOptions(initialMessage.options ?? []);
+    setMessages([{ role: 'ai', content: t('step1.welcome') }]);
+    setStep('purpose');
   }, [t]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const addAIMessage = (content: string, options?: Option[]) => {
+  const handleSelect = (userLabel: string, aiContent: string, nextStep: Step, action?: () => void) => {
+    // Add user selection
+    setMessages(prev => [...prev, { role: 'user', content: userLabel }]);
+    
+    // Execute any state updates
+    if (action) action();
+    
+    // Add AI response after delay
     setIsTyping(true);
     setTimeout(() => {
-      const newMessage: ChatMessage = { role: 'ai', content, showOptions: !!options, options };
-      setMessages(prev => [...prev, newMessage]);
-      setCurrentOptions(options ?? []);
+      setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
+      setStep(nextStep);
       setIsTyping(false);
-    }, 600);
+    }, 800);
   };
 
-  const handleOptionClick = (option: Option) => {
-    setSelectedOption(option.value);
-    setMessages(prev => [...prev, { role: 'user', content: option.label }]);
-    setCurrentOptions([]);
-    setSelectedOption(null);
-    option.action?.();
+  const handleContinue = () => {
+    navigate('/step/2');
   };
 
-  const handleBusinessSelect = () => {
-    setVisaType('M');
-    setTimeout(() => {
-      addAIMessage(t('step1.howMany.m'), [
-        { label: t('step1.single30'), value: 'single-30', action: () => handleMvisaSelect('Single', '30 days') },
-        { label: t('step1.double60'), value: 'double-60', action: () => handleMvisaSelect('Double', '60 days') },
-        { label: t('step1.multiple180'), value: 'multiple-180', action: () => handleMvisaSelect('Multiple', '180 days') },
-      ]);
-    }, 400);
-  };
-
-  const handleTransitSelect = () => {
-    setVisaType('G');
-    setTimeout(() => {
-      addAIMessage(t('step1.howMany.g'), [
-        { label: t('step1.transit24'), value: '24h', action: () => handleGvisaSelect('24 hours') },
-        { label: t('step1.transit72'), value: '72h', action: () => handleGvisaSelect('72 hours') },
-        { label: t('step1.transit144'), value: '144h', action: () => handleGvisaSelect('144 hours') },
-      ]);
-    }, 400);
-  };
-
-  const handleTourismSelect = () => {
-    setTimeout(() => {
-      addAIMessage(t('step1.notSupported'), [
-        { label: t('step1.business'), value: 'business', action: () => handleBusinessSelect() },
-        { label: t('step1.transit'), value: 'transit', action: () => handleTransitSelect() },
-      ]);
-    }, 400);
-  };
-
-  const handleMvisaSelect = (entry: string, duration: string) => {
-    setVisaEntry(entry);
-    setVisaDuration(duration);
-    setTimeout(() => {
-      addAIMessage(t('step1.result.m'), [
-        { label: t('step1.continue'), value: 'continue', action: () => navigate('/step/2') },
-      ]);
-    }, 400);
-  };
-
-  const handleGvisaSelect = (duration: string) => {
-    setVisaEntry('Transit');
-    setVisaDuration(duration);
-    setTimeout(() => {
-      addAIMessage(t('step1.result.g'), [
-        { label: t('step1.continue'), value: 'continue', action: () => navigate('/step/2') },
-      ]);
-    }, 400);
-  };
-
-  const getRequiredDocsList = () => {
-    if (state.visaType === 'M') {
-      return [
-        t('step1.doc.passport'), t('step1.doc.photo'), t('step1.doc.invitation'),
-        t('step1.doc.prevVisa'), t('step1.doc.residence'),
-      ];
+  const getOptions = () => {
+    if (isTyping) return null;
+    
+    if (step === 'purpose') {
+      return (
+        <div className="options-container">
+          <button className="option-btn" onClick={() => handleSelect(t('step1.business'), t('step1.howMany.m'), 'entry', () => setVisaType('M'))}>{t('step1.business')}</button>
+          <button className="option-btn" onClick={() => handleSelect(t('step1.transit'), t('step1.howMany.g'), 'entry', () => setVisaType('G'))}>{t('step1.transit')}</button>
+          <button className="option-btn" onClick={() => handleSelect(t('step1.tourism'), t('step1.notSupported'), 'purpose', () => {})}>{t('step1.tourism')}</button>
+          <button className="option-btn" onClick={() => handleSelect(t('step1.other'), t('step1.notSupported'), 'purpose', () => {})}>{t('step1.other')}</button>
+        </div>
+      );
     }
-    return [
-      t('step1.doc.passport'), t('step1.doc.photo'), t('step1.doc.ticket'),
-      t('step1.doc.prevVisa'), t('step1.doc.residence'),
-    ];
+    
+    if (step === 'entry') {
+      const isM = state.visaType === 'M';
+      if (isM) {
+        return (
+          <div className="options-container">
+            <button className="option-btn" onClick={() => handleSelect(t('step1.single30'), t('step1.result.m'), 'result', () => { setVisaEntry('Single'); setVisaDuration('30 days'); })}>{t('step1.single30')}</button>
+            <button className="option-btn" onClick={() => handleSelect(t('step1.double60'), t('step1.result.m'), 'result', () => { setVisaEntry('Double'); setVisaDuration('60 days'); })}>{t('step1.double60')}</button>
+            <button className="option-btn" onClick={() => handleSelect(t('step1.multiple180'), t('step1.result.m'), 'result', () => { setVisaEntry('Multiple'); setVisaDuration('180 days'); })}>{t('step1.multiple180')}</button>
+          </div>
+        );
+      } else {
+        return (
+          <div className="options-container">
+            <button className="option-btn" onClick={() => handleSelect(t('step1.transit24'), t('step1.result.g'), 'result', () => { setVisaEntry('Transit'); setVisaDuration('24 hours'); })}>{t('step1.transit24')}</button>
+            <button className="option-btn" onClick={() => handleSelect(t('step1.transit72'), t('step1.result.g'), 'result', () => { setVisaEntry('Transit'); setVisaDuration('72 hours'); })}>{t('step1.transit72')}</button>
+            <button className="option-btn" onClick={() => handleSelect(t('step1.transit144'), t('step1.result.g'), 'result', () => { setVisaEntry('Transit'); setVisaDuration('144 hours'); })}>{t('step1.transit144')}</button>
+          </div>
+        );
+      }
+    }
+    
+    if (step === 'result') {
+      return (
+        <div className="options-container">
+          <button className="option-btn" onClick={handleContinue}>{t('step1.continue')}</button>
+        </div>
+      );
+    }
+    
+    return null;
   };
 
-  const showDocList = state.visaType !== null;
+  const getDocs = () => {
+    if (state.visaType === 'M') {
+      return [t('step1.doc.passport'), t('step1.doc.photo'), t('step1.doc.invitation'), t('step1.doc.prevVisa'), t('step1.doc.residence')];
+    }
+    return [t('step1.doc.passport'), t('step1.doc.photo'), t('step1.doc.ticket'), t('step1.doc.prevVisa'), t('step1.doc.residence')];
+  };
 
   return (
     <div className="step1-container">
       <div className="step1-header">
         <h2>{t('step1.title')}</h2>
       </div>
-
       <div className="chat-container">
         <div className="chat-messages">
-          {messages.map((msg, index) => (
-            <div key={index}>
-              <ChatBubble role={msg.role} content={msg.content} />
-              {msg.showOptions && currentOptions.length > 0 && (
-                <div className="options-container">
-                  {currentOptions.map((opt, i) => (
-                    <button
-                      key={i}
-                      className={`option-btn ${selectedOption === opt.value ? 'selected' : ''}`}
-                      onClick={() => handleOptionClick(opt)}
-                      disabled={isTyping}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {isTyping && (
-            <div className="typing-indicator">
-              <span>🤖</span>
-              <div className="typing-dots">
-                <span></span><span></span><span></span>
-              </div>
-            </div>
-          )}
-
+          {messages.map((msg, i) => <ChatBubble key={i} role={msg.role} content={msg.content} />)}
+          {isTyping && <div className="typing-indicator"><span>🤖</span><div className="typing-dots"><span></span><span></span><span></span></div></div>}
+          {getOptions()}
           <div ref={chatEndRef} />
         </div>
-
-        {showDocList && state.visaType !== null && (
+        {state.visaType && (
           <div className="required-docs-card">
             <h3>📋 {t('step1.materials')}</h3>
-            <ul>
-              {getRequiredDocsList().map((doc, i) => (
-                <li key={i} className={i < 3 ? 'mandatory' : 'optional'}>{doc}</li>
-              ))}
-            </ul>
+            <ul>{getDocs().map((doc, i) => <li key={i} className={i < 3 ? 'mandatory' : 'optional'}>{doc}</li>)}</ul>
           </div>
         )}
       </div>
