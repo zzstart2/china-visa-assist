@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FileUploader from '../components/FileUploader';
 import { useVisa } from '../context/VisaContext';
+import { useI18n } from '../i18n/I18nContext';
 import './Step2.css';
 
 interface DocumentItem {
   id: string;
-  label: string;
+  labelKey: string;
   required: boolean;
   uploaded: boolean;
   uploading: boolean;
@@ -22,6 +23,7 @@ interface ValidationResult {
 
 function Step2() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { state, setExtractedPassport, setUploadedFiles } = useVisa();
   const { visaType } = state;
 
@@ -30,24 +32,22 @@ function Step2() {
   const [showValidation, setShowValidation] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Initialize documents based on visa type
   useEffect(() => {
     if (!visaType) return;
 
     const baseDocs: DocumentItem[] = [
-      { id: 'passport', label: 'Passport photo page', required: true, uploaded: false, uploading: false, success: false },
-      { id: 'photo', label: 'Application photo', required: true, uploaded: false, uploading: false, success: false },
+      { id: 'passport', labelKey: 'step2.passport', required: true, uploaded: false, uploading: false, success: false },
+      { id: 'photo', labelKey: 'step2.photo', required: true, uploaded: false, uploading: false, success: false },
     ];
 
     if (visaType === 'M') {
-      baseDocs.push({ id: 'invitation', label: 'Business invitation letter', required: true, uploaded: false, uploading: false, success: false });
+      baseDocs.push({ id: 'invitation', labelKey: 'step2.invitation', required: true, uploaded: false, uploading: false, success: false });
     } else if (visaType === 'G') {
-      baseDocs.push({ id: 'ticket', label: 'Onward ticket to third country', required: true, uploaded: false, uploading: false, success: false });
+      baseDocs.push({ id: 'ticket', labelKey: 'step2.ticket', required: true, uploaded: false, uploading: false, success: false });
     }
 
-    // Optional documents
-    baseDocs.push({ id: 'residence', label: 'Residence permit', required: false, uploaded: false, uploading: false, success: false });
-    baseDocs.push({ id: 'previous-visa', label: 'Previous Chinese visa copy', required: false, uploaded: false, uploading: false, success: false });
+    baseDocs.push({ id: 'residence', labelKey: 'step2.doc.residence', required: false, uploaded: false, uploading: false, success: false });
+    baseDocs.push({ id: 'previous-visa', labelKey: 'step2.doc.prevVisa', required: false, uploaded: false, uploading: false, success: false });
 
     setDocuments(baseDocs);
   }, [visaType]);
@@ -72,7 +72,6 @@ function Step2() {
 
       const data = await response.json();
 
-      // If passport, extract info
       if (docId === 'passport' && data.extractedData) {
         setExtractedPassport({
           name: data.extractedData.name,
@@ -83,22 +82,16 @@ function Step2() {
         });
       }
 
-      setDocuments(prev => prev.map(d => 
-        d.id === docId 
-          ? { ...d, uploaded: true, uploading: false, success: true, file } 
-          : d
+      setDocuments(prev => prev.map(d =>
+        d.id === docId ? { ...d, uploaded: true, uploading: false, success: true, file } : d
       ));
 
-      // Update uploaded files in context
       const newUploadedFiles = { ...state.uploadedFiles, [docId]: files };
       setUploadedFiles(newUploadedFiles);
     } catch (error) {
       console.error('Upload error:', error);
-      // Mock success for demo
-      setDocuments(prev => prev.map(d => 
-        d.id === docId 
-          ? { ...d, uploaded: true, uploading: false, success: true, file } 
-          : d
+      setDocuments(prev => prev.map(d =>
+        d.id === docId ? { ...d, uploaded: true, uploading: false, success: true, file } : d
       ));
     }
   };
@@ -124,11 +117,10 @@ function Step2() {
       setValidationResults(data.results || []);
     } catch (error) {
       console.error('Validation error:', error);
-      // Mock results for demo
       setValidationResults(documents.filter(d => d.required).map(d => ({
-        document: d.label,
+        document: t(d.labelKey),
         status: 'pass' as const,
-        message: 'Document verified successfully',
+        message: t('step2.validated'),
       })));
     } finally {
       setIsValidating(false);
@@ -141,8 +133,8 @@ function Step2() {
     return (
       <div className="step2-container">
         <div className="step2-empty">
-          <p>Please complete Step 1 first to determine your visa type.</p>
-          <button onClick={() => navigate('/step/1')}>Go to Step 1</button>
+          <p>{t('step2.goBack')}</p>
+          <button onClick={() => navigate('/step/1')}>{t('step2.goStep1')}</button>
         </div>
       </div>
     );
@@ -151,91 +143,86 @@ function Step2() {
   return (
     <div className="step2-container">
       <div className="step2-header">
-        <h2>Step 2: Document Upload</h2>
-        <p className="visa-type-badge">{visaType === 'M' ? 'M Visa (Business)' : 'G Visa (Transit)'}</p>
+        <h2>{t('step2.title')}</h2>
+        <p className="visa-type-badge">{visaType === 'M' ? t('step2.mBadge') : t('step2.gBadge')}</p>
       </div>
 
       <div className="documents-grid">
         {documents.map(doc => (
           <div key={doc.id} className={`document-card ${doc.uploaded ? 'uploaded' : ''} ${doc.success ? 'success' : ''}`}>
             <div className="doc-header">
-              <h3>{doc.label}</h3>
-              {doc.required && <span className="required-tag">Required</span>}
+              <h3>{t(doc.labelKey)}</h3>
+              {doc.required ? <span className="required-tag">{t('step2.required')}</span> : <span className="optional-tag">{t('step2.optional')}</span>}
             </div>
-            
+
             <FileUploader
               accept="image/*,.pdf"
               multiple={false}
               maxSize={10}
               onFilesChange={(files) => handleFileUpload(doc.id, files)}
-              label={doc.uploaded ? 'Click to replace' : 'Drag file or click to upload'}
+              label={doc.uploaded ? t('step2.replace') : t('step2.upload')}
             />
-            
+
             {doc.uploading && (
               <div className="upload-status uploading">
                 <div className="spinner"></div>
-                <span>Uploading...</span>
+                <span>{t('step2.uploading')}</span>
               </div>
             )}
-            
+
             {doc.success && (
               <div className="upload-status success">
                 <span className="check-icon">✓</span>
-                <span>OCR extraction successful</span>
+                <span>{t('step2.ocrSuccess')}</span>
               </div>
             )}
-            
+
             {doc.file && (
-              <div className="file-preview-info">
-                📄 {doc.file.name}
-              </div>
+              <div className="file-preview-info">📄 {doc.file.name}</div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Extracted Passport Info */}
       {state.extractedPassport && (
         <div className="passport-info-card">
-          <h3>📘 Extracted Passport Information</h3>
+          <h3>📘 {t('step2.extracted')}</h3>
           <div className="passport-details">
             <div className="detail-row">
-              <span className="detail-label">Name:</span>
+              <span className="detail-label">{t('step2.field.name')}:</span>
               <span className="detail-value">{state.extractedPassport.name || 'N/A'}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Passport Number:</span>
+              <span className="detail-label">{t('step2.field.passportNo')}:</span>
               <span className="detail-value">{state.extractedPassport.passportNumber || 'N/A'}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Nationality:</span>
+              <span className="detail-label">{t('step2.field.nationality')}:</span>
               <span className="detail-value">{state.extractedPassport.nationality || 'N/A'}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Date of Birth:</span>
+              <span className="detail-label">{t('step2.field.birthDate')}:</span>
               <span className="detail-value">{state.extractedPassport.birthDate || 'N/A'}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Expiry Date:</span>
+              <span className="detail-label">{t('step2.field.expiryDate')}:</span>
               <span className="detail-value">{state.extractedPassport.expiryDate || 'N/A'}</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Validation Button */}
       {canValidate && !showValidation && (
         <div className="validation-action">
           <button className="validate-btn" onClick={handleValidate} disabled={isValidating}>
-            {isValidating ? 'Validating...' : 'Validate Documents'}
+            {isValidating ? t('step2.validating') : t('step2.validate')}
           </button>
         </div>
       )}
 
-      {/* Validation Results */}
       {showValidation && (
         <div className="validation-results">
-          <h3>📋 Validation Results</h3>
+          <h3>📋 {t('step2.results')}</h3>
           {validationResults.map((result, index) => (
             <div key={index} className={`result-item ${result.status}`}>
               <span className="result-icon">{result.status === 'pass' ? '✓' : '✗'}</span>
@@ -243,11 +230,11 @@ function Step2() {
               <span className="result-message">{result.message}</span>
             </div>
           ))}
-          
+
           {allPassed && (
             <div className="continue-action">
               <button className="continue-btn" onClick={() => navigate('/step/3')}>
-                Continue to Information Collection →
+                {t('step2.continue')}
               </button>
             </div>
           )}
