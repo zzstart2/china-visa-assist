@@ -1,0 +1,61 @@
+.step-progress {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.sp-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.sp-step.completed {
+  background: #ecfdf5;
+}
+
+.sp-step.current {
+  background: #eff6ff;
+}
+
+.sp-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.sp-step.completed .sp-icon {
+  background: #059669;
+  color: white;
+}
+
+.sp-step.current .sp-icon {
+  background: #1a56db;
+  color: white;
+}
+
+.sp-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.sp-step.completed .sp-label,
+.sp-step.current .sp-label {
+  color: #1a56db;
+}

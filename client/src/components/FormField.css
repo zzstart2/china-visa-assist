@@ -1,0 +1,166 @@
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.ff-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.ff-required {
+  color: #dc2626;
+  margin-left: 0.25rem;
+}
+
+.ff-input,
+.ff-select,
+.ff-textarea {
+  padding: 0.75rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  color: #334155;
+  background: white;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ff-input:focus,
+.ff-select:focus,
+.ff-textarea:focus {
+  outline: none;
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+}
+
+.ff-input:disabled,
+.ff-select:disabled,
+.ff-textarea:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.ff-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Radio */
+.ff-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ff-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: #475569;
+}
+
+.ff-radio-input {
+  display: none;
+}
+
+.ff-radio-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ff-radio-input:checked + .ff-radio-custom {
+  border-color: #1a56db;
+}
+
+.ff-radio-input:checked + .ff-radio-custom::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: #1a56db;
+  border-radius: 50%;
+}
+
+/* Date */
+.ff-date-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ff-date-input {
+  width: 80px;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+.ff-date-select {
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: white;
+  min-width: 90px;
+}
+
+.ff-date-sep {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Checkbox */
+.ff-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: #475569;
+}
+
+.ff-checkbox-input {
+  display: none;
+}
+
+.ff-checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ff-checkbox-input:checked + .ff-checkbox-custom {
+  background: #1a56db;
+  border-color: #1a56db;
+}
+
+.ff-checkbox-input:checked + .ff-checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
