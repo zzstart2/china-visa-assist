@@ -25,7 +25,7 @@ interface Question {
 
 function Step3() {
   const navigate = useNavigate();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { state, setFormData } = useVisa();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
