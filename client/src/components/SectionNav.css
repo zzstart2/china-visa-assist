@@ -1,102 +1,138 @@
+/* ── Section Nav — vertical progress tracker ── */
 .section-nav {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-  width: 260px;
-  flex-shrink: 0;
-  border: 1px solid #e2e8f0;
+  width: 100%;
 }
 
 .sn-header {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  padding: 0 0 0.75rem;
 }
 
 .sn-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #64748b;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
-.sn-list {
+/* ── Track list ── */
+.sn-track {
   list-style: none;
   margin: 0;
-  padding: 0.5rem;
+  padding: 0;
 }
 
-.sn-item {
+.sn-step {
+  position: relative;
+}
+
+/* ── Step button ── */
+.sn-step-btn {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  align-items: flex-start;
+  gap: 10px;
   width: 100%;
-  padding: 0.875rem 1rem;
+  padding: 0;
   border: none;
   background: transparent;
-  border-radius: 8px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s ease;
-  font-size: 0.9375rem;
-  color: #475569;
+  font-family: inherit;
 }
 
-.sn-item:hover:not(:disabled) {
-  background: #f1f5f9;
+.sn-step-btn:disabled {
+  cursor: default;
 }
 
-.sn-item.current {
-  background: #dbeafe;
-  color: #1e40af;
-  font-weight: 500;
+/* ── Left indicator column (dot + line) ── */
+.sn-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 20px;
 }
 
-.sn-item.completed {
-  color: #16a34a;
-}
-
-.sn-item.locked {
-  color: #cbd5e1;
-  cursor: not-allowed;
-}
-
-.sn-icon {
-  width: 24px;
-  height: 24px;
+/* ── Dot ── */
+.sn-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #e2e8f0;
   flex-shrink: 0;
+  transition: all 0.25s ease;
+  position: relative;
+  box-sizing: border-box;
 }
 
-.sn-item.current .sn-icon {
-  background: #1e40af;
-  color: white;
-}
-
-.sn-item.completed .sn-icon {
-  background: #16a34a;
-  color: white;
-}
-
-.sn-item.locked .sn-icon {
+/* Future (default) */
+.sn-step.future .sn-dot {
   background: #e2e8f0;
+  border: 2px solid #cbd5e1;
 }
 
-.sn-label {
+/* Current */
+.sn-step.current .sn-dot {
+  background: #1e40af;
+  border: 2px solid #1e40af;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.15);
+}
+
+/* Completed */
+.sn-step.completed .sn-dot {
+  background: #16a34a;
+  border: 2px solid #16a34a;
+  color: #fff;
+}
+
+/* ── Connecting line ── */
+.sn-line {
+  display: block;
+  width: 2px;
   flex: 1;
+  min-height: 20px;
+  background: #e2e8f0;
+  transition: background 0.25s ease;
+}
+
+.sn-step.completed .sn-line {
+  background: #16a34a;
+}
+
+.sn-step.current .sn-line {
+  background: linear-gradient(180deg, #1e40af 0%, #e2e8f0 100%);
+}
+
+/* ── Label ── */
+.sn-label {
+  font-size: 0.8125rem;
+  line-height: 1.15;
+  padding: 0 0 16px;
+  color: #94a3b8;
+  transition: color 0.2s;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 150px;
 }
 
-.sn-lock {
-  font-size: 0.875rem;
+.sn-step.current .sn-label {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.sn-step.completed .sn-label {
+  color: #475569;
+  font-weight: 500;
+}
+
+.sn-step.future .sn-label {
+  color: #94a3b8;
+}
+
+.sn-step-btn:not(:disabled):hover .sn-label {
+  color: #1e40af;
 }

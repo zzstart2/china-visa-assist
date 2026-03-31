@@ -185,7 +185,7 @@ function Step3() {
       if (data.validation) {
         setMessages(prev => [
           ...prev,
-          { role: 'ai', content: `⚠️ ${data.validation.error}`, timestamp: new Date() },
+          { role: 'ai', content: `\u26a0\ufe0f ${data.validation.error}`, timestamp: new Date() },
         ]);
         setCurrentQuestion(data.question || currentQuestion);
         setIsLoading(false);
@@ -230,16 +230,16 @@ function Step3() {
 
   return (
     <div className="step3-container">
-      <div className="step3-header">
-        <div className="step3-progress">
-          <div className="sp-bar">
-            <div className="sp-fill" style={{ width: `${progress}%` }} />
-          </div>
-          <span className="sp-text">{t('step3.progress', { pct: String(progress) })}</span>
-        </div>
+      {/* ── Slim progress bar ── */}
+      <div className="step3-progress-bar">
+        <div className="step3-progress-fill" style={{ width: `${progress}%` }} />
+        <span className="step3-progress-text">
+          {t('step3.progress', { pct: String(progress) })}
+        </span>
       </div>
 
       <div className="step3-layout">
+        {/* ── Sidebar ── */}
         <aside className="step3-sidebar">
           <SectionNav
             sections={SECTIONS}
@@ -248,132 +248,148 @@ function Step3() {
           />
         </aside>
 
+        {/* ── Chat area ── */}
         <main className="step3-main">
-          <div className="chat-container">
-            <div className="chat-messages">
-              {messages.map((msg, idx) => (
-                <ChatBubble
-                  key={idx}
-                  role={msg.role}
-                  content={msg.content}
-                  timestamp={msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                />
-              ))}
+          <div className="chat-scroll-area">
+            {messages.map((msg, idx) => (
+              <ChatBubble
+                key={idx}
+                role={msg.role}
+                content={msg.content}
+                timestamp={msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              />
+            ))}
 
-              {isTyping && (
-                <div className="typing-indicator">
-                  <span className="typing-dot"></span>
-                  <span className="typing-dot"></span>
-                  <span className="typing-dot"></span>
+            {isTyping && (
+              <div className="typing-indicator">
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+              </div>
+            )}
+
+            {isLoading && !currentQuestion && !isTyping && (
+              <div className="loading-indicator">{t('step3.processing')}</div>
+            )}
+
+            {isComplete && (
+              <div className="complete-section">
+                <div className="complete-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
                 </div>
+                <div className="complete-message">{t('step3.complete')}</div>
+                <button onClick={handleComplete} className="review-button">
+                  {t('step3.continue')}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* ── Input dock ── */}
+          {currentQuestion && !isTyping && (
+            <div className="input-dock">
+              {currentQuestion.prefill && (
+                <div className="prefill-notice">{t('step3.prefill')}</div>
               )}
 
-              {isLoading && !currentQuestion && !isTyping && (
-                <div className="loading-indicator">{t('step3.processing')}</div>
-              )}
-
-              {currentQuestion && !isTyping && (
-                <div className="question-input-area">
-                  {currentQuestion.prefill && (
-                    <div className="prefill-notice">{t('step3.prefill')}</div>
-                  )}
-
-                  {currentQuestion.type === 'text' && (
-                    <div className="text-input-group">
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={userInput}
-                        onChange={(e) => setUserInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder={t('step3.placeholder')}
-                        className="chat-input"
-                      />
-                      <button
-                        onClick={handleTextSubmit}
-                        disabled={!userInput.trim() || isLoading}
-                        className="send-button"
-                      >
-                        {t('step3.send')}
-                      </button>
-                    </div>
-                  )}
-
-                  {currentQuestion.type === 'select' && (
-                    <div className="options-grid">
-                      {selectOptions.map((opt, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSelectClick(opt)}
-                          disabled={isLoading}
-                          className="option-button"
-                        >
-                          {tOption(opt)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {currentQuestion.type === 'date' && (
-                    <div className="date-input-group">
-                      <input
-                        type="text"
-                        value={dateValue.year}
-                        onChange={(e) => setDateValue({ ...dateValue, year: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                        placeholder="YYYY"
-                        className="date-input"
-                        maxLength={4}
-                      />
-                      <span className="date-sep">/</span>
-                      <select
-                        value={dateValue.month}
-                        onChange={(e) => setDateValue({ ...dateValue, month: e.target.value })}
-                        className="date-select"
-                      >
-                        <option value="">MM</option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                            {String(i + 1).padStart(2, '0')}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="date-sep">/</span>
-                      <select
-                        value={dateValue.day}
-                        onChange={(e) => setDateValue({ ...dateValue, day: e.target.value })}
-                        className="date-select"
-                      >
-                        <option value="">DD</option>
-                        {Array.from({ length: 31 }, (_, i) => (
-                          <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                            {String(i + 1).padStart(2, '0')}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={handleDateSubmit}
-                        disabled={!dateValue.year || !dateValue.month || !dateValue.day || isLoading}
-                        className="send-button"
-                      >
-                        {t('step3.confirm')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {isComplete && (
-                <div className="complete-section">
-                  <div className="complete-message">{t('step3.complete')}</div>
-                  <button onClick={handleComplete} className="review-button">
-                    {t('step3.continue')}
+              {currentQuestion.type === 'text' && (
+                <div className="text-input-row">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={t('step3.placeholder')}
+                    className="chat-input"
+                  />
+                  <button
+                    onClick={handleTextSubmit}
+                    disabled={!userInput.trim() || isLoading}
+                    className="send-btn"
+                    aria-label="Send"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
                   </button>
                 </div>
               )}
 
-              <div ref={messagesEndRef} />
+              {currentQuestion.type === 'select' && (
+                <div className="options-row">
+                  {selectOptions.map((opt, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSelectClick(opt)}
+                      disabled={isLoading}
+                      className="option-pill"
+                    >
+                      {tOption(opt)}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {currentQuestion.type === 'date' && (
+                <div className="date-row">
+                  <div className="date-segments">
+                    <input
+                      type="text"
+                      value={dateValue.year}
+                      onChange={(e) => setDateValue({ ...dateValue, year: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                      placeholder="YYYY"
+                      className="date-seg"
+                      maxLength={4}
+                    />
+                    <span className="date-div">/</span>
+                    <select
+                      value={dateValue.month}
+                      onChange={(e) => setDateValue({ ...dateValue, month: e.target.value })}
+                      className="date-seg"
+                    >
+                      <option value="">MM</option>
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                          {String(i + 1).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="date-div">/</span>
+                    <select
+                      value={dateValue.day}
+                      onChange={(e) => setDateValue({ ...dateValue, day: e.target.value })}
+                      className="date-seg"
+                    >
+                      <option value="">DD</option>
+                      {Array.from({ length: 31 }, (_, i) => (
+                        <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                          {String(i + 1).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleDateSubmit}
+                    disabled={!dateValue.year || !dateValue.month || !dateValue.day || isLoading}
+                    className="send-btn"
+                  >
+                    {t('step3.confirm')}
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </main>
       </div>
     </div>

@@ -1,10 +1,11 @@
 .question-card {
   background: white;
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   border: 1px solid #e2e8f0;
+  overflow: hidden;
 }
 
 .question-card.answered {
@@ -15,15 +16,16 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .qc-avatar {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
+  flex-shrink: 0;
 }
 
 .qc-label {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
@@ -31,13 +33,22 @@
 }
 
 .qc-question {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   color: #334155;
   line-height: 1.6;
-  margin-bottom: 1.25rem;
-  padding-left: 2.75rem;
+  margin-bottom: 1rem;
+  padding-left: 2.5rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .qc-answer {
-  padding-left: 2.75rem;
+  padding-left: 2.5rem;
+}
+
+@media (max-width: 768px) {
+  .qc-question,
+  .qc-answer {
+    padding-left: 0;
+  }
 }
