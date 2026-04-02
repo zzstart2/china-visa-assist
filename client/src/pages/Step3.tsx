@@ -1,212 +1,240 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVisa } from '../context/VisaContext';
-import { useI18n } from '../i18n/I18nContext';
-import SectionNav from '../components/SectionNav';
 import ChatBubble from '../components/ChatBubble';
 import './Step3.css';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface ChatMessage {
   role: 'ai' | 'user';
   content: string;
-  timestamp: Date;
 }
 
-interface Question {
-  question: string;
-  type: 'text' | 'select' | 'date';
-  options?: string[];
-  field: string;
-  section: number;
-  progress: number;
-  validation?: { error: string };
-  prefill?: string;
+interface FieldState {
+  path: string;
+  status: 'pending' | 'current' | 'filled';
+  value?: string;
 }
 
 function Step3() {
   const navigate = useNavigate();
-  const { t } = useI18n();
-  const { state, setFormData } = useVisa();
+  const { state, updateField, markFieldFilled } = useVisa();
+  const lang = state.language;
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessionId, setSessionId] = useState('');
+  const [currentField, setCurrentField] = useState('');
+  const [inputType, setInputType] = useState<'text' | 'select' | 'date'>('text');
+  const [options, setOptions] = useState<string[]>([]);
+  const [progress, setProgress] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const [userInput, setUserInput] = useState('');
+  const [dateValue, setDateValue] = useState({ year: '', month: '', day: '' });
+  const [fieldStates, setFieldStates] = useState<FieldState[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const SECTIONS = Array.from({ length: 9 }, (_, i) => t(`step3.sec.${i}`));
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
-  const [sessionId, setSessionId] = useState<string>('');
-  const [questionIndex, setQuestionIndex] = useState<number>(0);
-  const [progress, setProgress] = useState<number>(0);
-  const [currentSection, setCurrentSection] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [userInput, setUserInput] = useState<string>('');
-  const [selectOptions, setSelectOptions] = useState<string[]>([]);
-  const [dateValue, setDateValue] = useState({ year: '', month: '', day: '' });
-
-  const completedSections = Array.from({ length: currentSection }, (_, i) => i);
-
-  // Translate a question string based on field name
-  const tQuestion = (field: string, fallback: string) => {
-    const key = `q.${field}`;
-    const translated = t(key);
-    return translated === key ? fallback : translated;
-  };
-
-  // Translate select option
-  const tOption = (opt: string) => {
-    const key = `opt.${opt}`;
-    const translated = t(key);
-    return translated === key ? opt : translated;
-  };
-
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
+  // Focus input when question appears
   useEffect(() => {
-    const startChat = async () => {
-      if (!state.visaType) {
-        navigate('/step/1');
-        return;
-      }
+    if (currentField && inputType === 'text' && !isTyping) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [currentField, isTyping, inputType]);
 
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/chat/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ visaType: state.visaType }),
-        });
+  // Initialize field states from pendingFields
+  useEffect(() => {
+    if (state.pendingFields.length > 0) {
+      setFieldStates(state.pendingFields.map(path => ({ path, status: 'pending' })));
+    }
+  }, []);
 
-        const data = await response.json();
-
-        if (data.sessionId) {
-          setSessionId(data.sessionId);
-          setQuestionIndex(0);
-          processQuestion(data);
-        }
-      } catch (error) {
-        console.error('Failed to start chat:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
+  // Start chat on mount
+  useEffect(() => {
     startChat();
   }, []);
 
-  const processQuestion = (data: any) => {
-    if (data.done) {
-      if (data.summary) {
-        setFormData(data.summary);
-      }
-      setCurrentQuestion(null);
+  const startChat = async () => {
+    setIsLoading(true);
+    const pending = state.pendingFields;
+
+    if (pending.length === 0) {
+      setMessages([{ role: 'ai', content: lang === 'en'
+        ? '✅ All fields are already filled! You can proceed to review.'
+        : '✅ 所有字段已填写完毕！可以进入确认页面。' }]);
+      setIsDone(true);
       setProgress(100);
+      setIsLoading(false);
       return;
     }
 
-    if (data.progress !== undefined) {
-      setProgress(data.progress);
+    try {
+      const res = await fetch(`${API}/api/chat/ai`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pendingFields: pending,
+          language: lang,
+        }),
+      });
+      const data = await res.json();
+      handleResponse(data, true);
+    } catch {
+      // Fallback: use local mock
+      fallbackStart(pending);
     }
-    if (data.section !== undefined) {
-      setCurrentSection(data.section);
+    setIsLoading(false);
+  };
+
+  const fallbackStart = (pending: string[]) => {
+    const sid = `local_${Date.now()}`;
+    setSessionId(sid);
+    if (pending.length === 0) {
+      setIsDone(true);
+      return;
+    }
+    const field = pending[0];
+    showQuestion(field, getLocalQuestion(field), 'text', undefined, 0);
+  };
+
+  const handleResponse = (data: any, _isStart = false) => {
+    if (data.sessionId) setSessionId(data.sessionId);
+    if (data.progress !== undefined) setProgress(data.progress);
+
+    if (data.done) {
+      // Apply all filled data to form
+      if (data.formData) {
+        Object.entries(data.formData).forEach(([path, value]) => {
+          updateField(path, value);
+          markFieldFilled(path);
+        });
+      }
+      setFieldStates(prev => prev.map(f => ({ ...f, status: 'filled' })));
+      setIsDone(true);
+      setProgress(100);
+      addAIMessage(lang === 'en'
+        ? '✅ All information collected! You can now review and confirm.'
+        : '✅ 所有信息已收集完毕！请进入确认页面查看。');
+      return;
     }
 
-    let prefill: string | undefined;
-    if (data.field && state.extractedPassport) {
-      const fieldMap: Record<string, string> = {
-        name: state.extractedPassport.name || '',
-        passportNumber: state.extractedPassport.passportNumber || '',
-        nationality: state.extractedPassport.nationality || '',
-        birthDate: state.extractedPassport.birthDate || '',
-        expiryDate: state.extractedPassport.expiryDate || '',
-      };
-      prefill = fieldMap[data.field];
+    // Validation failure — re-ask
+    if (data.validation?.status === 'fail') {
+      addAIMessage(`⚠️ ${data.validation.message}`);
     }
 
-    if (prefill) {
-      setUserInput(prefill);
-    } else {
-      setUserInput('');
+    if (data.field) {
+      showQuestion(data.field, data.question, data.type || 'text', data.options, data.progress || 0);
+      // Update field states
+      setFieldStates(prev => prev.map(f => ({
+        ...f,
+        status: f.path === data.field ? 'current' : (f.status === 'filled' ? 'filled' : 'pending'),
+      })));
     }
+  };
 
-    const translatedQ = tQuestion(data.field, data.question);
-
-    const question: Question = {
-      question: translatedQ,
-      type: data.type || 'text',
-      options: data.options,
-      field: data.field || '',
-      section: data.section || 0,
-      progress: data.progress || 0,
-      validation: data.validation,
-      prefill,
-    };
-    setCurrentQuestion(question);
-
-    if (data.options) {
-      setSelectOptions(data.options);
-    }
-
+  const showQuestion = (field: string, question: string, type: string, opts: string[] | undefined, prog: number) => {
+    setCurrentField(field);
+    setInputType(type as 'text' | 'select' | 'date');
+    setOptions(opts || []);
+    setProgress(prog);
+    setUserInput('');
     setDateValue({ year: '', month: '', day: '' });
 
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
-      setMessages(prev => [
-        ...prev,
-        { role: 'ai', content: translatedQ, timestamp: new Date() },
-      ]);
-    }, 500);
+      addAIMessage(question);
+    }, 400);
+  };
+
+  const addAIMessage = (content: string) => {
+    setMessages(prev => [...prev, { role: 'ai', content }]);
   };
 
   const handleSubmit = async (answer: string) => {
-    if (!sessionId || isLoading) return;
+    if (!answer.trim() || isLoading) return;
 
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: answer, timestamp: new Date() },
-    ]);
+    // User message
+    setMessages(prev => [...prev, { role: 'user', content: answer }]);
 
-    setCurrentQuestion(null);
+    // Update field in context immediately
+    updateField(currentField, answer);
+
+    // Mark field as filled in sidebar
+    setFieldStates(prev => prev.map(f =>
+      f.path === currentField ? { ...f, status: 'filled', value: answer } : f
+    ));
+
+    setCurrentField('');
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat/reply', {
+      const res = await fetch(`${API}/api/chat/ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, answer, questionIndex }),
+        body: JSON.stringify({
+          sessionId,
+          field: currentField,
+          value: answer,
+          language: lang,
+        }),
       });
-
-      const data = await response.json();
-      setQuestionIndex(prev => prev + 1);
-
-      if (data.validation) {
-        setMessages(prev => [
-          ...prev,
-          { role: 'ai', content: `\u26a0\ufe0f ${data.validation.error}`, timestamp: new Date() },
-        ]);
-        setCurrentQuestion(data.question || currentQuestion);
-        setIsLoading(false);
-        return;
-      }
-
-      processQuestion(data);
-    } catch (error) {
-      console.error('Failed to submit answer:', error);
-    } finally {
-      setIsLoading(false);
+      const data = await res.json();
+      handleResponse(data);
+    } catch {
+      // Fallback: local progression
+      fallbackReply(answer);
     }
+
+    setIsLoading(false);
   };
 
-  const handleTextSubmit = () => {
-    if (!userInput.trim()) return;
-    handleSubmit(userInput.trim());
+  const fallbackReply = (_answer: string) => {
+    markFieldFilled(currentField);
+    const remaining = fieldStates.filter(f => f.status === 'pending');
+    if (remaining.length === 0) {
+      setIsDone(true);
+      setProgress(100);
+      addAIMessage(lang === 'en' ? '✅ All done!' : '✅ 全部完成！');
+      return;
+    }
+    const next = remaining[0];
+    showQuestion(next.path, getLocalQuestion(next.path), 'text', undefined,
+      Math.round(((fieldStates.length - remaining.length) / fieldStates.length) * 100));
   };
 
-  const handleSelectClick = (option: string) => {
-    handleSubmit(option);
+  const getLocalQuestion = (field: string): string => {
+    const map: Record<string, { en: string; zh: string }> = {
+      'section5.currentAddress': { en: 'What is your current home address?', zh: '请输入您当前的居住地址：' },
+      'section5.phone': { en: 'What is your phone number?', zh: '请输入您的电话号码：' },
+      'section5.mobilePhone': { en: 'What is your mobile phone number?', zh: '请输入您的手机号码：' },
+      'section5.email': { en: 'What is your email address?', zh: '请输入您的电子邮箱：' },
+      'section6.inviter.name': { en: 'Name of the inviting person/organization in China?', zh: '在华邀请人/机构名称：' },
+      'section6.inviter.phone': { en: 'Inviter phone number?', zh: '邀请人电话：' },
+      'section6.inviter.relationship': { en: 'Your relationship with the inviter?', zh: '与邀请人关系：' },
+      'section6.emergencyContact.familyName': { en: 'Emergency contact name?', zh: '紧急联系人姓名：' },
+      'section6.emergencyContact.phone': { en: 'Emergency contact phone?', zh: '紧急联系人电话：' },
+      'section6.emergencyContact.relationship': { en: 'Emergency contact relationship?', zh: '紧急联系人关系：' },
+      'section6.travelPayBy': { en: 'Who will pay for this travel? (Self / Other / Organization)', zh: '旅行费用由谁承担？（Self / Other / Organization）' },
+      'section4.entries': { en: 'Highest education level? (High school / Bachelor / Master / Doctoral / Other)', zh: '最高学历？（高中/本科/硕士/博士/其他）' },
+    };
+    return map[field]?.[lang] || field;
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(userInput.trim());
+    }
   };
 
   const handleDateSubmit = () => {
@@ -215,176 +243,129 @@ function Step3() {
     handleSubmit(`${year}-${month}-${day}`);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleTextSubmit();
-    }
+  const getFieldLabel = (path: string): string => {
+    const labels: Record<string, { en: string; zh: string }> = {
+      'section5.currentAddress': { en: 'Address', zh: '地址' },
+      'section5.phone': { en: 'Phone', zh: '电话' },
+      'section5.mobilePhone': { en: 'Mobile', zh: '手机' },
+      'section5.email': { en: 'Email', zh: '邮箱' },
+      'section6.inviter.name': { en: 'Inviter', zh: '邀请人' },
+      'section6.inviter.phone': { en: 'Inviter Tel', zh: '邀请人电话' },
+      'section6.inviter.relationship': { en: 'Relationship', zh: '关系' },
+      'section6.emergencyContact.familyName': { en: 'Emergency', zh: '紧急联系人' },
+      'section6.emergencyContact.phone': { en: 'Emergency Tel', zh: '紧急电话' },
+      'section6.emergencyContact.relationship': { en: 'Emergency Rel', zh: '紧急关系' },
+      'section6.travelPayBy': { en: 'Travel Pay', zh: '费用承担' },
+      'section4.entries': { en: 'Education', zh: '学历' },
+    };
+    return labels[path]?.[lang] || path.split('.').pop() || path;
   };
-
-  const handleComplete = () => {
-    navigate('/step/4');
-  };
-
-  const isComplete = !currentQuestion && messages.length > 0 && progress === 100;
 
   return (
     <div className="step3-container">
-      {/* ── Slim progress bar ── */}
+      {/* Progress bar */}
       <div className="step3-progress-bar">
         <div className="step3-progress-fill" style={{ width: `${progress}%` }} />
-        <span className="step3-progress-text">
-          {t('step3.progress', { pct: String(progress) })}
-        </span>
+        <span className="step3-progress-text">{progress}%</span>
       </div>
 
       <div className="step3-layout">
-        {/* ── Sidebar ── */}
+        {/* Field sidebar */}
         <aside className="step3-sidebar">
-          <SectionNav
-            sections={SECTIONS}
-            currentSection={currentSection}
-            completedSections={completedSections}
-          />
+          <h4>{lang === 'en' ? 'Fields' : '字段进度'}</h4>
+          <div className="field-list">
+            {fieldStates.map((f, i) => (
+              <div key={i} className={`field-item ${f.status}`}>
+                <span className="field-icon">
+                  {f.status === 'filled' ? '✅' : f.status === 'current' ? '✏️' : '○'}
+                </span>
+                <span className="field-label">{getFieldLabel(f.path)}</span>
+                {f.value && <span className="field-value">{f.value.length > 15 ? f.value.slice(0, 15) + '…' : f.value}</span>}
+              </div>
+            ))}
+          </div>
         </aside>
 
-        {/* ── Chat area ── */}
+        {/* Chat area */}
         <main className="step3-main">
           <div className="chat-scroll-area">
-            {messages.map((msg, idx) => (
-              <ChatBubble
-                key={idx}
-                role={msg.role}
-                content={msg.content}
-                timestamp={msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              />
+            {messages.map((msg, i) => (
+              <ChatBubble key={i} role={msg.role} content={msg.content} />
             ))}
-
             {isTyping && (
               <div className="typing-indicator">
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-                <span className="typing-dot" />
+                <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
               </div>
             )}
-
-            {isLoading && !currentQuestion && !isTyping && (
-              <div className="loading-indicator">{t('step3.processing')}</div>
+            {isLoading && !isTyping && (
+              <div className="loading-indicator">{lang === 'en' ? 'Thinking...' : '思考中...'}</div>
             )}
-
-            {isComplete && (
+            {isDone && (
               <div className="complete-section">
-                <div className="complete-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
-                </div>
-                <div className="complete-message">{t('step3.complete')}</div>
-                <button onClick={handleComplete} className="review-button">
-                  {t('step3.continue')}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
+                <button onClick={() => navigate('/step/4')} className="review-button">
+                  {lang === 'en' ? 'Review & Confirm →' : '确认信息 →'}
                 </button>
               </div>
             )}
-
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ── Input dock ── */}
-          {currentQuestion && !isTyping && (
+          {/* Input dock */}
+          {currentField && !isTyping && !isDone && (
             <div className="input-dock">
-              {currentQuestion.prefill && (
-                <div className="prefill-notice">{t('step3.prefill')}</div>
-              )}
-
-              {currentQuestion.type === 'text' && (
+              {inputType === 'text' && (
                 <div className="text-input-row">
                   <input
                     ref={inputRef}
                     type="text"
                     value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder={t('step3.placeholder')}
+                    onChange={e => setUserInput(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder={lang === 'en' ? 'Type your answer...' : '输入您的回答...'}
                     className="chat-input"
                   />
                   <button
-                    onClick={handleTextSubmit}
+                    onClick={() => handleSubmit(userInput.trim())}
                     disabled={!userInput.trim() || isLoading}
                     className="send-btn"
-                    aria-label="Send"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
+                    ➤
                   </button>
                 </div>
               )}
 
-              {currentQuestion.type === 'select' && (
+              {inputType === 'select' && (
                 <div className="options-row">
-                  {selectOptions.map((opt, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSelectClick(opt)}
-                      disabled={isLoading}
-                      className="option-pill"
-                    >
-                      {tOption(opt)}
+                  {options.map((opt, i) => (
+                    <button key={i} onClick={() => handleSubmit(opt)} disabled={isLoading} className="option-pill">
+                      {opt}
                     </button>
                   ))}
                 </div>
               )}
 
-              {currentQuestion.type === 'date' && (
+              {inputType === 'date' && (
                 <div className="date-row">
-                  <div className="date-segments">
-                    <input
-                      type="text"
-                      value={dateValue.year}
-                      onChange={(e) => setDateValue({ ...dateValue, year: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                      placeholder="YYYY"
-                      className="date-seg"
-                      maxLength={4}
-                    />
-                    <span className="date-div">/</span>
-                    <select
-                      value={dateValue.month}
-                      onChange={(e) => setDateValue({ ...dateValue, month: e.target.value })}
-                      className="date-seg"
-                    >
-                      <option value="">MM</option>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                          {String(i + 1).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="date-div">/</span>
-                    <select
-                      value={dateValue.day}
-                      onChange={(e) => setDateValue({ ...dateValue, day: e.target.value })}
-                      className="date-seg"
-                    >
-                      <option value="">DD</option>
-                      {Array.from({ length: 31 }, (_, i) => (
-                        <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                          {String(i + 1).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    onClick={handleDateSubmit}
-                    disabled={!dateValue.year || !dateValue.month || !dateValue.day || isLoading}
-                    className="send-btn"
-                  >
-                    {t('step3.confirm')}
+                  <input
+                    type="text"
+                    value={dateValue.year}
+                    onChange={e => setDateValue({ ...dateValue, year: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                    placeholder="YYYY"
+                    className="date-seg"
+                    maxLength={4}
+                  />
+                  <span>/</span>
+                  <select value={dateValue.month} onChange={e => setDateValue({ ...dateValue, month: e.target.value })} className="date-seg">
+                    <option value="">MM</option>
+                    {Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')}</option>)}
+                  </select>
+                  <span>/</span>
+                  <select value={dateValue.day} onChange={e => setDateValue({ ...dateValue, day: e.target.value })} className="date-seg">
+                    <option value="">DD</option>
+                    {Array.from({ length: 31 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{String(i + 1).padStart(2, '0')}</option>)}
+                  </select>
+                  <button onClick={handleDateSubmit} disabled={!dateValue.year || !dateValue.month || !dateValue.day} className="send-btn">
+                    ✓
                   </button>
                 </div>
               )}

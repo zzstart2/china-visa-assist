@@ -435,6 +435,276 @@ app.get('/api/export/csv', (req: Request, res: Response) => {
   res.send(csv);
 });
 
+// ==================== P2: Batch Upload + Mock OCR ====================
+const uploadBatch = multer({ dest: 'uploads/' });
+
+app.post('/api/upload/batch', uploadBatch.array('files', 20), (req: Request, res: Response) => {
+  const files = (req as any).files || [];
+  
+  // Mock classification + OCR result
+  const classified = files.map((f: any) => ({
+    filename: f.originalname,
+    type: guessDocType(f.originalname),
+    status: 'processed',
+  }));
+
+  // Return mock prefill data (Philippine M-visa applicant)
+  res.json({
+    success: true,
+    files: classified,
+    prefillData: {
+      section1: {
+        familyName: { value: 'DELA CRUZ', notApplicable: false },
+        givenName: { value: 'JUAN', notApplicable: false },
+        otherNames: '',
+        chineseName: '',
+        birthDate: { year: '1990', month: '05', day: '15' },
+        gender: 'Male',
+        birthCountry: 'Philippines',
+        birthProvince: 'Metro Manila',
+        birthCity: 'Manila',
+        maritalStatus: 'Single',
+        currentNationality: 'Philippines',
+        nationalIdNumber: { value: '', notApplicable: true },
+        hasOtherNationality: 'no',
+        hasPermanentResident: 'no',
+        hadOtherNationalities: 'no',
+        passportType: 'Ordinary',
+        passportNumber: 'P1234567A',
+        issuingCountry: 'Philippines',
+        placeOfIssue: 'Manila',
+        passportExpiry: { year: '2030', month: '05', day: '15' },
+      },
+      section2: {
+        visaType: '(M) Commercial and trade activities',
+        serviceType: 'Normal',
+        entries: 'Single',
+      },
+      section3: {
+        currentOccupation: 'Businessperson',
+        occupationOther: '',
+        workHistory: [{
+          dateFrom: { year: '2020', month: '01' },
+          dateTo: { year: '2026', month: '03' },
+          employerName: 'ABC Trading Co., Ltd.',
+          employerAddress: '123 Business Ave, Makati City, Philippines',
+          employerPhone: '+63 2 888 1234',
+          supervisorName: '',
+          supervisorPhone: '',
+          position: 'Regional Manager',
+          duty: 'Business development and trade negotiations',
+        }],
+      },
+    },
+    pendingFields: [
+      'section5.currentAddress', 'section5.phone', 'section5.mobilePhone', 'section5.email',
+      'section6.inviter.name', 'section6.inviter.phone', 'section6.inviter.relationship',
+      'section6.emergencyContact.familyName', 'section6.emergencyContact.phone',
+      'section6.emergencyContact.relationship', 'section6.travelPayBy',
+      'section4.entries',
+    ],
+  });
+});
+
+function guessDocType(filename: string): string {
+  const lower = filename.toLowerCase();
+  if (lower.includes('passport')) return 'passport';
+  if (lower.includes('photo')) return 'photo';
+  if (lower.includes('invit')) return 'invitation';
+  if (lower.includes('employ')) return 'employment';
+  return 'other';
+}
+
+// ==================== P3: AI Chat (MiniMax / Mock fallback) ====================
+
+interface AIChatSession {
+  pendingFields: string[];
+  filledFields: Record<string, string>;
+  currentFieldIdx: number;
+  language: string;
+}
+
+const aiChatSessions: Record<string, AIChatSession> = {};
+
+// Field metadata for generating questions
+const fieldMeta: Record<string, { labelEn: string; labelZh: string; type: string; options?: string[] }> = {
+  'section5.currentAddress': { labelEn: 'What is your current home address?', labelZh: '请输入您当前的居住地址：', type: 'text' },
+  'section5.phone': { labelEn: 'What is your phone number?', labelZh: '请输入您的电话号码：', type: 'text' },
+  'section5.mobilePhone': { labelEn: 'What is your mobile phone number?', labelZh: '请输入您的手机号码：', type: 'text' },
+  'section5.email': { labelEn: 'What is your email address?', labelZh: '请输入您的电子邮箱：', type: 'text' },
+  'section6.inviter.name': { labelEn: 'Name of the inviting person/organization in China?', labelZh: '在华邀请人/机构名称：', type: 'text' },
+  'section6.inviter.phone': { labelEn: 'Phone number of the inviting person/organization?', labelZh: '邀请人/机构电话：', type: 'text' },
+  'section6.inviter.relationship': { labelEn: 'Your relationship with the inviter?', labelZh: '与邀请人/机构的关系：', type: 'text' },
+  'section6.emergencyContact.familyName': { labelEn: 'Emergency contact\'s name?', labelZh: '紧急联系人姓名：', type: 'text' },
+  'section6.emergencyContact.phone': { labelEn: 'Emergency contact\'s phone number?', labelZh: '紧急联系人电话：', type: 'text' },
+  'section6.emergencyContact.relationship': { labelEn: 'Emergency contact\'s relationship to you?', labelZh: '紧急联系人与您的关系：', type: 'text' },
+  'section6.travelPayBy': { labelEn: 'Who will pay for this travel?', labelZh: '旅行费用由谁承担？', type: 'select', options: ['Self', 'Other', 'Organization'] },
+  'section4.entries': { labelEn: 'What is your highest education level?', labelZh: '您的最高学历是什么？', type: 'select', options: ['High school', 'Bachelor', 'Master', 'Doctoral', 'Other'] },
+};
+
+// POST /api/chat/ai — start or continue AI chat
+app.post('/api/chat/ai', async (req: Request, res: Response) => {
+  const { sessionId, pendingFields, language, field, value } = req.body;
+
+  // ── Start new session ──
+  if (!field && pendingFields) {
+    const sid = sessionId || `ai_${Date.now()}`;
+    aiChatSessions[sid] = {
+      pendingFields: pendingFields || [],
+      filledFields: {},
+      currentFieldIdx: 0,
+      language: language || 'en',
+    };
+
+    const session = aiChatSessions[sid];
+    if (session.pendingFields.length === 0) {
+      return res.json({ done: true, sessionId: sid, progress: 100 });
+    }
+
+    const firstField = session.pendingFields[0];
+    const meta = fieldMeta[firstField];
+    const question = await generateQuestion(firstField, meta, session, true);
+
+    return res.json({
+      sessionId: sid,
+      field: firstField,
+      question: question.text,
+      type: meta?.type || 'text',
+      options: meta?.options,
+      progress: 0,
+      totalFields: session.pendingFields.length,
+    });
+  }
+
+  // ── Reply to a question ──
+  const session = aiChatSessions[sessionId];
+  if (!session) {
+    return res.status(400).json({ error: 'Invalid session' });
+  }
+
+  // Validate field
+  const validation = await validateField(field, value);
+
+  if (validation.status === 'fail') {
+    // Re-ask same field
+    const meta = fieldMeta[field];
+    return res.json({
+      field,
+      question: validation.message,
+      type: meta?.type || 'text',
+      options: meta?.options,
+      validation,
+      progress: Math.round((Object.keys(session.filledFields).length / session.pendingFields.length) * 100),
+      done: false,
+    });
+  }
+
+  // Save answer
+  session.filledFields[field] = value;
+  session.currentFieldIdx = session.pendingFields.indexOf(field) + 1;
+
+  // Check if done
+  const remaining = session.pendingFields.filter(f => !session.filledFields[f]);
+  if (remaining.length === 0) {
+    return res.json({
+      done: true,
+      formData: session.filledFields,
+      progress: 100,
+      validation,
+    });
+  }
+
+  // Next field
+  const nextField = remaining[0];
+  const meta = fieldMeta[nextField];
+  const question = await generateQuestion(nextField, meta, session, false);
+
+  res.json({
+    field: nextField,
+    question: question.text,
+    type: meta?.type || 'text',
+    options: meta?.options,
+    validation,
+    progress: Math.round((Object.keys(session.filledFields).length / session.pendingFields.length) * 100),
+    done: false,
+  });
+});
+
+// POST /api/validate/field — rule-based validation (mock: always pass)
+app.post('/api/validate/field', (req: Request, res: Response) => {
+  const { field, value } = req.body;
+  // Placeholder for real rule engine
+  res.json({ field, status: 'pass', message: '' });
+});
+
+// ── MiniMax LLM integration ──
+async function generateQuestion(
+  field: string,
+  meta: { labelEn: string; labelZh: string; type: string; options?: string[] } | undefined,
+  session: AIChatSession,
+  isFirst: boolean
+): Promise<{ text: string }> {
+  const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;
+
+  if (!MINIMAX_API_KEY || !meta) {
+    // Fallback to static question
+    const text = session.language === 'zh' ? (meta?.labelZh || field) : (meta?.labelEn || field);
+    return { text };
+  }
+
+  try {
+    const filledSummary = Object.entries(session.filledFields)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n');
+
+    const systemPrompt = session.language === 'zh'
+      ? `你是中国签证申请助手。你正在帮助菲律宾商务签（M签）申请人补充申请表信息。
+已填写的字段：
+${filledSummary || '（暂无）'}
+现在需要询问字段：${field}（${meta.labelZh}）
+${meta.options ? `选项：${meta.options.join(', ')}` : ''}
+请用友好、简洁的中文提问。只问这一个字段，不要问多个问题。`
+      : `You are a China visa application assistant helping a Philippine M-visa (business) applicant fill in their form.
+Already filled fields:
+${filledSummary || '(none yet)'}
+Now ask about: ${field} (${meta.labelEn})
+${meta.options ? `Options: ${meta.options.join(', ')}` : ''}
+Ask in a friendly, concise way. Only ask about this one field.`;
+
+    const response = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${MINIMAX_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'MiniMax-Text-01',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: isFirst ? 'Please start asking.' : 'Next question please.' },
+        ],
+        max_tokens: 200,
+        temperature: 0.7,
+      }),
+    });
+
+    const data: any = await response.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (text) return { text };
+  } catch (e) {
+    console.error('MiniMax API error:', e);
+  }
+
+  // Fallback
+  const text = session.language === 'zh' ? (meta?.labelZh || field) : (meta?.labelEn || field);
+  return { text };
+}
+
+async function validateField(_field: string, _value: string): Promise<{ status: string; message: string }> {
+  // Placeholder — always pass. Future: plug in rule engine.
+  return { status: 'pass', message: '' };
+}
+
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
