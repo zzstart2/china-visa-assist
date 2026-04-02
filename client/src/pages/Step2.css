@@ -6,7 +6,7 @@
 
 .step2-header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .step2-header h2 {
@@ -26,6 +26,54 @@
   font-weight: 500;
 }
 
+.step2-intro {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9375rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+/* Batch drop zone */
+.batch-drop-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1.25rem;
+  background: #fafbfc;
+}
+
+.batch-drop-zone:hover {
+  border-color: #3b82f6;
+  background: #f0f7ff;
+}
+
+.batch-drop-zone.dragging {
+  border-color: #1e40af;
+  background: #eff6ff;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
+}
+
+.drop-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.drop-title {
+  font-size: 1.0625rem;
+  color: #334155;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.drop-subtitle {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
 /* Document Checklist */
 .doc-checklist {
   background: white;
@@ -40,6 +88,18 @@
   color: #1e3a5f;
   margin-bottom: 1rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checklist-count {
+  font-size: 0.75rem;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.125rem 0.5rem;
+  border-radius: 10px;
+  font-weight: 500;
 }
 
 .doc-row {
@@ -290,4 +350,5 @@
   .file-name-small { max-width: 80px; }
   .prefill-stats { flex-direction: column; align-items: center; }
   .stat-card { max-width: 100%; width: 100%; }
+  .batch-drop-zone { padding: 1.5rem 1rem; }
 }
