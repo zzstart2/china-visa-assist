@@ -4,7 +4,7 @@ import { useVisa } from '../context/VisaContext';
 import ChatBubble from '../components/ChatBubble';
 import './Step3.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API = import.meta.env.VITE_API_URL || '';
 
 interface ChatMessage {
   role: 'ai' | 'user';

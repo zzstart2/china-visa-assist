@@ -5,7 +5,7 @@ import type { DocumentStatus, DocumentType, ApplicationForm } from '../types/app
 import { createMockPrefill, createEmptyForm } from '../constants/formDefaults';
 import './Step2.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API = import.meta.env.VITE_API_URL || '';
 
 /** M-visa required document checklist */
 function getInitialChecklist(): DocumentStatus[] {
