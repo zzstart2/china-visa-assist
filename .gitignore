@@ -3,3 +3,6 @@ dist/
 uploads/
 *.lock
 .DS_Store
+.env
+.env.*
+!.env.example

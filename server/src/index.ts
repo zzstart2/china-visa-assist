@@ -2,7 +2,7 @@
  * Server entry point — env, middleware, routes, listen.
  */
 import dotenv from 'dotenv';
-dotenv.config({ path: '/root/.openclaw/.env' });
+dotenv.config();
 
 import app from './app';
 import { mountRoutes } from './routes';
