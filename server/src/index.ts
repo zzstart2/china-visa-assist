@@ -528,10 +528,36 @@ const aiChatSessions: Record<string, AIChatSession> = {};
 
 // Field metadata for generating questions
 const fieldMeta: Record<string, { labelEn: string; labelZh: string; type: string; options?: string[] }> = {
+  // Section 1: Personal Information
+  'section1.familyName': { labelEn: 'What is your family name (as shown on passport)?', labelZh: '您的姓氏（护照上的）：', type: 'text' },
+  'section1.givenName': { labelEn: 'What is your given name (as shown on passport)?', labelZh: '您的名字（护照上的）：', type: 'text' },
+  'section1.birthDate': { labelEn: 'What is your date of birth?', labelZh: '您的出生日期：', type: 'date' },
+  'section1.gender': { labelEn: 'What is your gender?', labelZh: '您的性别：', type: 'select', options: ['Male', 'Female'] },
+  'section1.birthCountry': { labelEn: 'Which country were you born in?', labelZh: '您的出生国家：', type: 'text' },
+  'section1.birthProvince': { labelEn: 'Which province/state were you born in?', labelZh: '出生省份/州：', type: 'text' },
+  'section1.birthCity': { labelEn: 'Which city were you born in?', labelZh: '出生城市：', type: 'text' },
+  'section1.maritalStatus': { labelEn: 'What is your marital status?', labelZh: '您的婚姻状况：', type: 'select', options: ['Single', 'Married', 'Divorced', 'Widowed', 'Other'] },
+  'section1.currentNationality': { labelEn: 'What is your current nationality?', labelZh: '您的当前国籍：', type: 'text' },
+  'section1.passportNumber': { labelEn: 'What is your passport number?', labelZh: '您的护照号码：', type: 'text' },
+  'section1.issuingCountry': { labelEn: 'Which country issued your passport?', labelZh: '护照签发国：', type: 'text' },
+  'section1.placeOfIssue': { labelEn: 'Where was your passport issued?', labelZh: '护照签发地：', type: 'text' },
+  'section1.passportExpiry': { labelEn: 'When does your passport expire?', labelZh: '护照有效期至：', type: 'date' },
+  // Section 3: Work
+  'section3.currentOccupation': { labelEn: 'What is your current occupation?', labelZh: '您当前的职业：', type: 'select', options: ['Businessperson', 'Company employee', 'Student', 'Self-employed', 'Retired', 'Other'] },
+  'section3.employerName': { labelEn: 'What is the name of your employer?', labelZh: '您的雇主名称：', type: 'text' },
+  'section3.employerAddress': { labelEn: 'What is your employer\'s address?', labelZh: '雇主地址：', type: 'text' },
+  'section3.employerPhone': { labelEn: 'What is your employer\'s phone number?', labelZh: '雇主电话：', type: 'text' },
+  'section3.position': { labelEn: 'What is your job title/position?', labelZh: '您的职位：', type: 'text' },
+  // Section 4: Education
+  'section4.entries': { labelEn: 'What is your highest education level?', labelZh: '您的最高学历是什么？', type: 'select', options: ['High school', 'Bachelor', 'Master', 'Doctoral', 'Other'] },
+  'section4.instituteName': { labelEn: 'Name of your educational institution?', labelZh: '您的学校名称：', type: 'text' },
+  'section4.major': { labelEn: 'What was your major/field of study?', labelZh: '您的专业：', type: 'text' },
+  // Section 5: Family / Contact
   'section5.currentAddress': { labelEn: 'What is your current home address?', labelZh: '请输入您当前的居住地址：', type: 'text' },
   'section5.phone': { labelEn: 'What is your phone number?', labelZh: '请输入您的电话号码：', type: 'text' },
   'section5.mobilePhone': { labelEn: 'What is your mobile phone number?', labelZh: '请输入您的手机号码：', type: 'text' },
   'section5.email': { labelEn: 'What is your email address?', labelZh: '请输入您的电子邮箱：', type: 'text' },
+  // Section 6: Travel
   'section6.inviter.name': { labelEn: 'Name of the inviting person/organization in China?', labelZh: '在华邀请人/机构名称：', type: 'text' },
   'section6.inviter.phone': { labelEn: 'Phone number of the inviting person/organization?', labelZh: '邀请人/机构电话：', type: 'text' },
   'section6.inviter.relationship': { labelEn: 'Your relationship with the inviter?', labelZh: '与邀请人/机构的关系：', type: 'text' },
@@ -539,7 +565,14 @@ const fieldMeta: Record<string, { labelEn: string; labelZh: string; type: string
   'section6.emergencyContact.phone': { labelEn: 'Emergency contact\'s phone number?', labelZh: '紧急联系人电话：', type: 'text' },
   'section6.emergencyContact.relationship': { labelEn: 'Emergency contact\'s relationship to you?', labelZh: '紧急联系人与您的关系：', type: 'text' },
   'section6.travelPayBy': { labelEn: 'Who will pay for this travel?', labelZh: '旅行费用由谁承担？', type: 'select', options: ['Self', 'Other', 'Organization'] },
-  'section4.entries': { labelEn: 'What is your highest education level?', labelZh: '您的最高学历是什么？', type: 'select', options: ['High school', 'Bachelor', 'Master', 'Doctoral', 'Other'] },
+  // Short-name aliases (for compatibility with different pendingFields formats)
+  'maritalStatus': { labelEn: 'What is your marital status?', labelZh: '您的婚姻状况：', type: 'select', options: ['Single', 'Married', 'Divorced', 'Widowed', 'Other'] },
+  'currentAddress': { labelEn: 'What is your current home address?', labelZh: '请输入您当前的居住地址：', type: 'text' },
+  'phone': { labelEn: 'What is your phone number?', labelZh: '请输入您的电话号码：', type: 'text' },
+  'email': { labelEn: 'What is your email address?', labelZh: '请输入您的电子邮箱：', type: 'text' },
+  'education': { labelEn: 'What is your highest education level?', labelZh: '您的最高学历是什么？', type: 'select', options: ['High school', 'Bachelor', 'Master', 'Doctoral', 'Other'] },
+  'occupation': { labelEn: 'What is your current occupation?', labelZh: '您当前的职业：', type: 'select', options: ['Businessperson', 'Company employee', 'Student', 'Self-employed', 'Retired', 'Other'] },
+  'employerName': { labelEn: 'What is the name of your employer?', labelZh: '您的雇主名称：', type: 'text' },
 };
 
 // POST /api/chat/ai — start or continue AI chat
@@ -637,7 +670,7 @@ app.post('/api/validate/field', (req: Request, res: Response) => {
   res.json({ field, status: 'pass', message: '' });
 });
 
-// ── MiniMax LLM integration ──
+// ── MiniMax LLM integration (Anthropic Messages API) ──
 async function generateQuestion(
   field: string,
   meta: { labelEn: string; labelZh: string; type: string; options?: string[] } | undefined,
@@ -658,38 +691,35 @@ async function generateQuestion(
       .join('\n');
 
     const systemPrompt = session.language === 'zh'
-      ? `你是中国签证申请助手。你正在帮助菲律宾商务签（M签）申请人补充申请表信息。
+      ? `你是中国签证申请助手，正在帮助菲律宾商务签（M签）申请人补充申请表信息。
 已填写的字段：
 ${filledSummary || '（暂无）'}
 现在需要询问字段：${field}（${meta.labelZh}）
-${meta.options ? `选项：${meta.options.join(', ')}` : ''}
-请用友好、简洁的中文提问。只问这一个字段，不要问多个问题。`
-      : `You are a China visa application assistant helping a Philippine M-visa (business) applicant fill in their form.
-Already filled fields:
+只问一个简短自然的问题（1-2句话）。不要列出选项，不要解释字段含义。像朋友聊天一样问。`
+      : `You are a China visa application assistant helping a Philippine M-visa (business) applicant.
+Already filled:
 ${filledSummary || '(none yet)'}
 Now ask about: ${field} (${meta.labelEn})
-${meta.options ? `Options: ${meta.options.join(', ')}` : ''}
-Ask in a friendly, concise way. Only ask about this one field.`;
+Ask ONE short, natural question (1-2 sentences max). Do NOT list options or explain the field. Be conversational.`;
 
-    const response = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+    const response = await fetch('https://api.minimaxi.com/anthropic/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${MINIMAX_API_KEY}`,
+        'x-api-key': MINIMAX_API_KEY,
       },
       body: JSON.stringify({
-        model: 'MiniMax-Text-01',
+        model: 'MiniMax-M2.5',
+        max_tokens: 200,
+        system: systemPrompt,
         messages: [
-          { role: 'system', content: systemPrompt },
           { role: 'user', content: isFirst ? 'Please start asking.' : 'Next question please.' },
         ],
-        max_tokens: 200,
-        temperature: 0.7,
       }),
     });
 
     const data: any = await response.json();
-    const text = data?.choices?.[0]?.message?.content;
+    const text = data?.content?.find((c: any) => c.type === 'text')?.text;
     if (text) return { text };
   } catch (e) {
     console.error('MiniMax API error:', e);
