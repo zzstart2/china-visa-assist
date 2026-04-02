@@ -284,8 +284,8 @@
   border-color: #3b82f6;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Responsive — hide sidebar only on very small screens */
+@media (max-width: 520px) {
   .step3-sidebar {
     display: none;
   }
@@ -296,5 +296,16 @@
 
   .input-dock {
     padding: 0.5rem 0.75rem;
+  }
+}
+
+/* Compact sidebar on medium screens */
+@media (min-width: 521px) and (max-width: 768px) {
+  .step3-sidebar {
+    width: 160px;
+    min-width: 160px;
+  }
+  .field-value {
+    display: none;
   }
 }

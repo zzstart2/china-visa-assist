@@ -3,8 +3,9 @@ import { useI18n } from '../../i18n/I18nContext';
 
 const OCCUPATIONS = [
   'Businessperson','Company employee','Entertainer','Industrial & agricultural worker',
-  'Student','Government official','Military personnel','NGO staff','Religious personnel',
-  'Media representative','Crew member','Self-employed','Unemployed','Retired','Academic','Other'
+  'Student','Member of parliament','Government official','Military personnel','NGO staff',
+  'Religious personnel','Media representative','Crew member','Self-employed','Unemployed',
+  'Retired','Academic','Other'
 ];
 
 interface WorkEntry {
@@ -32,7 +33,8 @@ export default function Section3({ data, onChange }: Props) {
   const OCCUPATION_KEYS: Record<string, string> = {
     'Businessperson': 's3.occBusinessperson', 'Company employee': 's3.occEmployee',
     'Entertainer': 's3.occEntertainer', 'Industrial & agricultural worker': 's3.occWorker',
-    'Student': 's3.occStudent', 'Government official': 's3.occGovernment',
+    'Student': 's3.occStudent', 'Member of parliament': 's3.occParliament',
+    'Government official': 's3.occGovernment',
     'Military personnel': 's3.occMilitary', 'NGO staff': 's3.occNgo',
     'Religious personnel': 's3.occReligious', 'Media representative': 's3.occMedia',
     'Crew member': 's3.occCrew', 'Self-employed': 's3.occSelfEmployed',

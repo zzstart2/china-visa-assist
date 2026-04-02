@@ -19,36 +19,93 @@ function getInitialChecklist(): DocumentStatus[] {
   ];
 }
 
-/** Compute which fields are still empty after prefill */
+/** Compute which fields are still empty after prefill — covers ALL required CCNA fields */
 function computePendingFields(form: ApplicationForm): string[] {
   const pending: string[] = [];
+
+  // ── Section 1: Personal Information ──
   const s1 = form.section1;
-  if (!s1.familyName.value) pending.push('section1.familyName');
-  if (!s1.givenName.value) pending.push('section1.givenName');
+  if (!s1.familyName.value && !s1.familyName.notApplicable) pending.push('section1.familyName');
+  if (!s1.givenName.value && !s1.givenName.notApplicable) pending.push('section1.givenName');
   if (!s1.birthDate.year) pending.push('section1.birthDate');
   if (!s1.gender) pending.push('section1.gender');
   if (!s1.birthCountry) pending.push('section1.birthCountry');
+  if (!s1.birthProvince) pending.push('section1.birthProvince');
+  if (!s1.birthCity) pending.push('section1.birthCity');
   if (!s1.maritalStatus) pending.push('section1.maritalStatus');
   if (!s1.currentNationality) pending.push('section1.currentNationality');
+  if (!s1.nationalIdNumber.value && !s1.nationalIdNumber.notApplicable) pending.push('section1.nationalIdNumber');
+  if (!s1.hasOtherNationality) pending.push('section1.hasOtherNationality');
+  if (!s1.hasPermanentResident) pending.push('section1.hasPermanentResident');
+  if (!s1.hadOtherNationalities) pending.push('section1.hadOtherNationalities');
+  if (!s1.passportType) pending.push('section1.passportType');
   if (!s1.passportNumber) pending.push('section1.passportNumber');
+  if (!s1.issuingCountry) pending.push('section1.issuingCountry');
+  if (!s1.placeOfIssue) pending.push('section1.placeOfIssue');
+  if (!s1.passportExpiry.year) pending.push('section1.passportExpiry');
 
+  // ── Section 2: Visa Type ──
+  const s2 = form.section2;
+  if (!s2.serviceType) pending.push('section2.serviceType');
+
+  // ── Section 3: Work Information ──
+  const s3 = form.section3;
+  if (!s3.currentOccupation) pending.push('section3.currentOccupation');
+  if (s3.workHistory.length === 0) pending.push('section3.workHistory');
+
+  // ── Section 4: Education ──
+  if (form.section4.entries.length === 0 && !form.section4.notApplicable) pending.push('section4.entries');
+
+  // ── Section 5: Family Information ──
   const s5 = form.section5;
   if (!s5.currentAddress) pending.push('section5.currentAddress');
   if (!s5.phone) pending.push('section5.phone');
   if (!s5.mobilePhone) pending.push('section5.mobilePhone');
-  if (!s5.email) pending.push('section5.email');
+  // 5.5B Father
+  if (!s5.father.familyName.value && !s5.father.familyName.notApplicable) pending.push('section5.father');
+  // 5.5C Mother
+  if (!s5.mother.familyName.value && !s5.mother.familyName.notApplicable) pending.push('section5.mother');
+  // 5.5E Relatives in China
+  if (!s5.hasRelativesInChina) pending.push('section5.hasRelativesInChina');
 
+  // ── Section 6: Travel Information ──
   const s6 = form.section6;
-  if (!s6.inviter.name) pending.push('section6.inviter.name');
-  if (!s6.inviter.phone) pending.push('section6.inviter.phone');
-  if (!s6.emergencyContact.familyName.value) pending.push('section6.emergencyContact.familyName');
+  if (s6.itinerary.length === 0) pending.push('section6.itinerary');
+  if (!s6.inviter.name && !s6.inviter.notApplicable) pending.push('section6.inviter.name');
+  if (!s6.inviter.phone && !s6.inviter.notApplicable) pending.push('section6.inviter.phone');
+  if (!s6.inviter.relationship && !s6.inviter.notApplicable) pending.push('section6.inviter.relationship');
+  if (!s6.emergencyContact.familyName.value && !s6.emergencyContact.familyName.notApplicable) pending.push('section6.emergencyContact.familyName');
+  if (!s6.emergencyContact.givenName.value && !s6.emergencyContact.givenName.notApplicable) pending.push('section6.emergencyContact.givenName');
+  if (!s6.emergencyContact.relationship) pending.push('section6.emergencyContact.relationship');
   if (!s6.emergencyContact.phone) pending.push('section6.emergencyContact.phone');
   if (!s6.travelPayBy) pending.push('section6.travelPayBy');
+  if (!s6.sharePassport) pending.push('section6.sharePassport');
 
-  const s3 = form.section3;
-  if (!s3.currentOccupation) pending.push('section3.currentOccupation');
+  // ── Section 7: Previous Travel ──
+  const s7 = form.section7;
+  if (!s7.hasBeenToChina) pending.push('section7.hasBeenToChina');
+  if (!s7.hasChineseVisa) pending.push('section7.hasChineseVisa');
+  if (!s7.hasOtherValidVisa) pending.push('section7.hasOtherValidVisa');
+  if (!s7.hasTraveledLast12Months) pending.push('section7.hasTraveledLast12Months');
 
-  if (form.section4.entries.length === 0 && !form.section4.notApplicable) pending.push('section4.entries');
+  // ── Section 8: Other Information (11 Yes/No questions) ──
+  const s8 = form.section8;
+  if (!s8.refusedVisa.answer) pending.push('section8.refusedVisa');
+  if (!s8.canceledVisa.answer) pending.push('section8.canceledVisa');
+  if (!s8.illegalEntry.answer) pending.push('section8.illegalEntry');
+  if (!s8.criminalRecord.answer) pending.push('section8.criminalRecord');
+  if (!s8.mentalOrInfectious.answer) pending.push('section8.mentalOrInfectious');
+  if (!s8.visitedEpidemic.answer) pending.push('section8.visitedEpidemic');
+  if (!s8.specialSkills.answer) pending.push('section8.specialSkills');
+  if (!s8.militaryService.answer) pending.push('section8.militaryService');
+  if (!s8.paramilitaryOrg.answer) pending.push('section8.paramilitaryOrg');
+  if (!s8.charitableOrg.answer) pending.push('section8.charitableOrg');
+  if (!s8.otherDeclaration.answer) pending.push('section8.otherDeclaration');
+
+  // ── Section 9: Declaration ──
+  const s9 = form.section9;
+  if (!s9.filledBy) pending.push('section9.filledBy');
+  if (!s9.agreed) pending.push('section9.agreed');
 
   return pending;
 }
@@ -87,6 +144,7 @@ function Step2() {
   const [uploadDone, setUploadDone] = useState(false);
   const [prefillSummary, setPrefillSummary] = useState<{ filled: number; pending: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [complianceWarnings, setComplianceWarnings] = useState<Array<{ field: string; level: string; messageEn: string; messageZh: string }>>([]);
   const batchInputRef = useRef<HTMLInputElement>(null);
   const itemInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -156,6 +214,20 @@ function Step2() {
         const result = applyPrefill(data.prefillData, mergeForm, setPendingFields, setFilledFields);
         setPrefillSummary({ filled: result.filled.length, pending: result.pending.length });
         setDocuments(checklist.filter(d => d.uploaded));
+
+        // Run compliance validation
+        try {
+          const valRes = await fetch(`${API}/api/validate/compliance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefillData: data.prefillData }),
+          });
+          const valData = await valRes.json();
+          if (valData.warnings?.length > 0) {
+            setComplianceWarnings(valData.warnings);
+          }
+        } catch { /* compliance check is best-effort */ }
+
         setUploadDone(true);
       } else {
         throw new Error('Invalid API response');
@@ -167,6 +239,20 @@ function Step2() {
       const result = applyPrefill(prefill as Partial<ApplicationForm>, mergeForm, setPendingFields, setFilledFields);
       setPrefillSummary({ filled: result.filled.length, pending: result.pending.length });
       setDocuments(checklist.filter(d => d.uploaded));
+
+      // Run compliance validation on mock data too
+      try {
+        const valRes = await fetch(`${API}/api/validate/compliance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prefillData: prefill }),
+        });
+        const valData = await valRes.json();
+        if (valData.warnings?.length > 0) {
+          setComplianceWarnings(valData.warnings);
+        }
+      } catch { /* best-effort */ }
+
       setUploadDone(true);
     }
 
@@ -283,6 +369,26 @@ function Step2() {
                 ? (lang === 'en' ? '🔍 Auto-Classify & Extract Information' : '🔍 自动分类并提取信息')
                 : (lang === 'en' ? 'Upload all required documents first' : '请先上传所有必须材料')}
           </button>
+        </div>
+      )}
+
+      {/* Compliance Warnings */}
+      {uploadDone && complianceWarnings.length > 0 && (
+        <div className="compliance-warnings">
+          <h3>{lang === 'en' ? '⚠️ Compliance Check Results' : '⚠️ 合规校验结果'}</h3>
+          {complianceWarnings.map((w, i) => (
+            <div key={i} className={`compliance-item ${w.level}`}>
+              <span className="compliance-icon">{w.level === 'error' ? '🚫' : '⚠️'}</span>
+              <span className="compliance-msg">{lang === 'en' ? w.messageEn : w.messageZh}</span>
+            </div>
+          ))}
+          {complianceWarnings.some(w => w.level === 'error') && (
+            <p className="compliance-block-msg">
+              {lang === 'en'
+                ? 'Please fix the errors above before continuing.'
+                : '请先修正以上错误后再继续。'}
+            </p>
+          )}
         </div>
       )}
 

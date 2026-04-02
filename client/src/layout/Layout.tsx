@@ -1,10 +1,12 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext';
+import { useVisa } from '../context/VisaContext';
 import './Layout.css';
 
 function Layout() {
   const location = useLocation();
-  const { t, toggleLang } = useI18n();
+  const { t, toggleLang, lang } = useI18n();
+  const { setLanguage: setVisaLang } = useVisa();
 
   const steps = [
     { path: '/step/1', label: t('step.1') },
@@ -21,7 +23,11 @@ function Layout() {
     <div className="layout">
       <header className="header">
         <h1 className="title">{t('app.title')}</h1>
-        <button className="lang-toggle" onClick={toggleLang}>{t('app.lang.toggle')}</button>
+        <button className="lang-toggle" onClick={() => {
+          toggleLang();
+          // Sync VisaContext language with I18nContext
+          setVisaLang(lang === 'en' ? 'zh' : 'en');
+        }}>{t('app.lang.toggle')}</button>
       </header>
       
       {isStepPage && (

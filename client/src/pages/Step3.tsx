@@ -37,6 +37,7 @@ function Step3() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasStarted = useRef(false); // Guard against React StrictMode double-invoke
 
   // Auto-scroll
   useEffect(() => {
@@ -50,15 +51,14 @@ function Step3() {
     }
   }, [currentField, isTyping, inputType]);
 
-  // Initialize field states from pendingFields
+  // Initialize field states + start chat on mount (guarded)
   useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+
     if (state.pendingFields.length > 0) {
       setFieldStates(state.pendingFields.map(path => ({ path, status: 'pending' })));
     }
-  }, []);
-
-  // Start chat on mount
-  useEffect(() => {
     startChat();
   }, []);
 
@@ -214,18 +214,70 @@ function Step3() {
 
   const getLocalQuestion = (field: string): string => {
     const map: Record<string, { en: string; zh: string }> = {
+      // Section 1
+      'section1.familyName': { en: 'What is your family name (as shown on passport)?', zh: '您的姓氏（护照上的）：' },
+      'section1.givenName': { en: 'What is your given name (as shown on passport)?', zh: '您的名字（护照上的）：' },
+      'section1.birthDate': { en: 'What is your date of birth?', zh: '您的出生日期：' },
+      'section1.gender': { en: 'What is your gender?', zh: '您的性别：' },
+      'section1.birthCountry': { en: 'Which country were you born in?', zh: '您的出生国家：' },
+      'section1.birthProvince': { en: 'Which province/state were you born in?', zh: '出生省份/州：' },
+      'section1.birthCity': { en: 'Which city were you born in?', zh: '出生城市：' },
+      'section1.maritalStatus': { en: 'What is your marital status?', zh: '您的婚姻状况：' },
+      'section1.currentNationality': { en: 'What is your current nationality?', zh: '您的当前国籍：' },
+      'section1.nationalIdNumber': { en: 'What is your national ID number? (type N/A if not applicable)', zh: '您的国籍国身份证号（无则输入 N/A）：' },
+      'section1.hasOtherNationality': { en: 'Do you have any other nationality?', zh: '您是否有其他国籍？' },
+      'section1.hasPermanentResident': { en: 'Do you have permanent resident status in any other country?', zh: '您是否拥有其他国家的永久居留权？' },
+      'section1.hadOtherNationalities': { en: 'Have you ever had any other nationalities or resident status?', zh: '您是否曾拥有其他国籍或居留身份？' },
+      'section1.passportType': { en: 'What type of passport do you hold?', zh: '您的护照类型：' },
+      'section1.passportNumber': { en: 'What is your passport number?', zh: '您的护照号码：' },
+      'section1.issuingCountry': { en: 'Which country issued your passport?', zh: '护照签发国：' },
+      'section1.placeOfIssue': { en: 'Where was your passport issued?', zh: '护照签发地：' },
+      'section1.passportExpiry': { en: 'When does your passport expire?', zh: '护照有效期至：' },
+      // Section 2
+      'section2.serviceType': { en: 'Do you need express or normal service?', zh: '您需要加急还是普通服务？' },
+      // Section 3
+      'section3.currentOccupation': { en: 'What is your current occupation?', zh: '您当前的职业：' },
+      'section3.workHistory': { en: 'Please provide your most recent employer name.', zh: '请提供您最近的雇主名称：' },
+      // Section 4
+      'section4.entries': { en: 'What is your highest education level?', zh: '您的最高学历：' },
+      // Section 5
       'section5.currentAddress': { en: 'What is your current home address?', zh: '请输入您当前的居住地址：' },
       'section5.phone': { en: 'What is your phone number?', zh: '请输入您的电话号码：' },
       'section5.mobilePhone': { en: 'What is your mobile phone number?', zh: '请输入您的手机号码：' },
-      'section5.email': { en: 'What is your email address?', zh: '请输入您的电子邮箱：' },
-      'section6.inviter.name': { en: 'Name of the inviting person/organization in China?', zh: '在华邀请人/机构名称：' },
+      'section5.father': { en: "What is your father's full name?", zh: '您父亲的姓名：' },
+      'section5.mother': { en: "What is your mother's full name?", zh: '您母亲的姓名：' },
+      'section5.hasRelativesInChina': { en: 'Do you have any immediate relatives (other than parents) in China?', zh: '除父母外，您是否有直系亲属在中国？' },
+      // Section 6
+      'section6.itinerary': { en: 'What is your planned arrival date in China?', zh: '您计划什么时候到达中国？' },
+      'section6.inviter.name': { en: 'Name of the inviting company/person in China?', zh: '在华邀请公司/人名称：' },
       'section6.inviter.phone': { en: 'Inviter phone number?', zh: '邀请人电话：' },
       'section6.inviter.relationship': { en: 'Your relationship with the inviter?', zh: '与邀请人关系：' },
-      'section6.emergencyContact.familyName': { en: 'Emergency contact name?', zh: '紧急联系人姓名：' },
+      'section6.emergencyContact.familyName': { en: "Emergency contact's family name?", zh: '紧急联系人姓氏：' },
+      'section6.emergencyContact.givenName': { en: "Emergency contact's given name?", zh: '紧急联系人名字：' },
+      'section6.emergencyContact.relationship': { en: 'Emergency contact relationship to you?', zh: '紧急联系人与您的关系：' },
       'section6.emergencyContact.phone': { en: 'Emergency contact phone?', zh: '紧急联系人电话：' },
-      'section6.emergencyContact.relationship': { en: 'Emergency contact relationship?', zh: '紧急联系人关系：' },
       'section6.travelPayBy': { en: 'Who will pay for this travel? (Self / Other / Organization)', zh: '旅行费用由谁承担？（Self / Other / Organization）' },
-      'section4.entries': { en: 'Highest education level? (High school / Bachelor / Master / Doctoral / Other)', zh: '最高学历？（高中/本科/硕士/博士/其他）' },
+      'section6.sharePassport': { en: 'Are you traveling with someone who shares the same passport?', zh: '是否有人与您共用同一本护照旅行？' },
+      // Section 7
+      'section7.hasBeenToChina': { en: 'Have you ever been to China?', zh: '您是否曾到访过中国？' },
+      'section7.hasChineseVisa': { en: 'Have you ever obtained a Chinese visa?', zh: '您是否曾获得过中国签证？' },
+      'section7.hasOtherValidVisa': { en: 'Do you have any valid visas issued by other countries?', zh: '您是否持有其他国家的有效签证？' },
+      'section7.hasTraveledLast12Months': { en: 'Have you traveled to any other country in the past 12 months?', zh: '过去12个月您是否出访过其他国家？' },
+      // Section 8
+      'section8.refusedVisa': { en: 'Have you ever been refused a Chinese visa or denied entry into China?', zh: '您是否曾被拒签或拒绝入境中国？' },
+      'section8.canceledVisa': { en: 'Has your Chinese visa ever been canceled?', zh: '您的中国签证是否曾被注销？' },
+      'section8.illegalEntry': { en: 'Have you ever entered China illegally, overstayed, or worked illegally?', zh: '您是否曾非法入境、逾期居留或非法工作？' },
+      'section8.criminalRecord': { en: 'Do you have any criminal record in China or any other country?', zh: '您是否有犯罪记录？' },
+      'section8.mentalOrInfectious': { en: 'Do you have any serious mental disorders or infectious diseases?', zh: '您是否患有严重精神疾病或传染病？' },
+      'section8.visitedEpidemic': { en: 'Have you visited any epidemic areas in the past 30 days?', zh: '过去30天您是否到访过疫区？' },
+      'section8.specialSkills': { en: 'Do you have any training in firearms, explosives, or NBC fields?', zh: '您是否接受过枪械、爆炸物或核生化领域的培训？' },
+      'section8.militaryService': { en: 'Are you serving or have you ever served in the military?', zh: '您是否正在服役或曾经服役？' },
+      'section8.paramilitaryOrg': { en: 'Have you ever participated in any paramilitary or rebel organization?', zh: '您是否曾参与准军事或武装组织？' },
+      'section8.charitableOrg': { en: 'Have you worked for any professional, social, or charitable organization?', zh: '您是否在专业/社会/慈善机构工作过？' },
+      'section8.otherDeclaration': { en: 'Is there anything else you want to declare?', zh: '您是否有其他需要申报的事项？' },
+      // Section 9
+      'section9.filledBy': { en: 'Who is filling in this form? (applicant / representative)', zh: '谁在填写此表？（申请人本人 / 代填人）' },
+      'section9.agreed': { en: 'Do you understand and agree with the declaration? (yes / no)', zh: '您是否理解并同意声明条款？（yes / no）' },
     };
     return map[field]?.[lang] || field;
   };
@@ -245,18 +297,70 @@ function Step3() {
 
   const getFieldLabel = (path: string): string => {
     const labels: Record<string, { en: string; zh: string }> = {
+      // Section 1
+      'section1.familyName': { en: 'Family Name', zh: '姓' },
+      'section1.givenName': { en: 'Given Name', zh: '名' },
+      'section1.birthDate': { en: 'Birth Date', zh: '出生日期' },
+      'section1.gender': { en: 'Gender', zh: '性别' },
+      'section1.birthCountry': { en: 'Birth Country', zh: '出生国' },
+      'section1.birthProvince': { en: 'Birth Province', zh: '出生省' },
+      'section1.birthCity': { en: 'Birth City', zh: '出生城市' },
+      'section1.maritalStatus': { en: 'Marital Status', zh: '婚姻状况' },
+      'section1.currentNationality': { en: 'Nationality', zh: '国籍' },
+      'section1.nationalIdNumber': { en: 'National ID', zh: '身份证号' },
+      'section1.hasOtherNationality': { en: 'Other Nationality', zh: '其他国籍' },
+      'section1.hasPermanentResident': { en: 'Perm. Resident', zh: '永居' },
+      'section1.hadOtherNationalities': { en: 'Former Nationality', zh: '曾有国籍' },
+      'section1.passportType': { en: 'Passport Type', zh: '护照类型' },
+      'section1.passportNumber': { en: 'Passport No.', zh: '护照号' },
+      'section1.issuingCountry': { en: 'Issuing Country', zh: '签发国' },
+      'section1.placeOfIssue': { en: 'Place of Issue', zh: '签发地' },
+      'section1.passportExpiry': { en: 'Passport Expiry', zh: '护照有效期' },
+      // Section 2
+      'section2.serviceType': { en: 'Service Type', zh: '服务类型' },
+      // Section 3
+      'section3.currentOccupation': { en: 'Occupation', zh: '职业' },
+      'section3.workHistory': { en: 'Work History', zh: '工作经历' },
+      // Section 4
+      'section4.entries': { en: 'Education', zh: '学历' },
+      // Section 5
       'section5.currentAddress': { en: 'Address', zh: '地址' },
       'section5.phone': { en: 'Phone', zh: '电话' },
       'section5.mobilePhone': { en: 'Mobile', zh: '手机' },
-      'section5.email': { en: 'Email', zh: '邮箱' },
+      'section5.father': { en: 'Father', zh: '父亲' },
+      'section5.mother': { en: 'Mother', zh: '母亲' },
+      'section5.hasRelativesInChina': { en: 'Relatives in CN', zh: '在华亲属' },
+      // Section 6
+      'section6.itinerary': { en: 'Itinerary', zh: '行程' },
       'section6.inviter.name': { en: 'Inviter', zh: '邀请人' },
       'section6.inviter.phone': { en: 'Inviter Tel', zh: '邀请人电话' },
-      'section6.inviter.relationship': { en: 'Relationship', zh: '关系' },
-      'section6.emergencyContact.familyName': { en: 'Emergency', zh: '紧急联系人' },
+      'section6.inviter.relationship': { en: 'Inviter Rel.', zh: '邀请人关系' },
+      'section6.emergencyContact.familyName': { en: 'Emergency Name', zh: '紧急联系人姓' },
+      'section6.emergencyContact.givenName': { en: 'Emergency Given', zh: '紧急联系人名' },
+      'section6.emergencyContact.relationship': { en: 'Emergency Rel.', zh: '紧急关系' },
       'section6.emergencyContact.phone': { en: 'Emergency Tel', zh: '紧急电话' },
-      'section6.emergencyContact.relationship': { en: 'Emergency Rel', zh: '紧急关系' },
       'section6.travelPayBy': { en: 'Travel Pay', zh: '费用承担' },
-      'section4.entries': { en: 'Education', zh: '学历' },
+      'section6.sharePassport': { en: 'Share Passport', zh: '共用护照' },
+      // Section 7
+      'section7.hasBeenToChina': { en: 'Been to China', zh: '到访过中国' },
+      'section7.hasChineseVisa': { en: 'Had CN Visa', zh: '曾获中国签证' },
+      'section7.hasOtherValidVisa': { en: 'Other Visa', zh: '其他有效签证' },
+      'section7.hasTraveledLast12Months': { en: 'Recent Travel', zh: '近期出访' },
+      // Section 8
+      'section8.refusedVisa': { en: '8.1 Refused', zh: '8.1 拒签' },
+      'section8.canceledVisa': { en: '8.2 Canceled', zh: '8.2 注销' },
+      'section8.illegalEntry': { en: '8.3 Illegal Entry', zh: '8.3 非法入境' },
+      'section8.criminalRecord': { en: '8.4 Criminal', zh: '8.4 犯罪记录' },
+      'section8.mentalOrInfectious': { en: '8.5 Health', zh: '8.5 健康' },
+      'section8.visitedEpidemic': { en: '8.6 Epidemic', zh: '8.6 疫区' },
+      'section8.specialSkills': { en: '8.7 Special Skills', zh: '8.7 特殊技能' },
+      'section8.militaryService': { en: '8.8 Military', zh: '8.8 服役' },
+      'section8.paramilitaryOrg': { en: '8.9 Paramilitary', zh: '8.9 武装组织' },
+      'section8.charitableOrg': { en: '8.10 Charitable', zh: '8.10 慈善机构' },
+      'section8.otherDeclaration': { en: '8.11 Other', zh: '8.11 其他' },
+      // Section 9
+      'section9.filledBy': { en: 'Filled By', zh: '填表人' },
+      'section9.agreed': { en: 'Declaration', zh: '声明确认' },
     };
     return labels[path]?.[lang] || path.split('.').pop() || path;
   };
