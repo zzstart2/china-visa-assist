@@ -3,6 +3,8 @@
   gap: 0;
   min-height: calc(100vh - 120px);
   overflow: hidden;
+  max-width: 1080px;
+  margin: 0 auto;
 }
 
 .step4-nav {
