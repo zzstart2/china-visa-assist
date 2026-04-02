@@ -289,7 +289,8 @@ server {
 
 | Document | Path | Description |
 |----------|------|-------------|
-| CCNA 表单 PRD | `docs/visa-ccna-form-prd.md` | 表单 9 Section 字段定义、校验规则 |
+| CCNA 表单 PRD | `docs/visa-ccna-form-prd.md` | 表单 9 Section 字段定义 + 条件联动规则 + 实现状态标注 |
+| 条件联动详情 | `docs/conditional-linkage.md` | 23 个 Flag 完整联动规则（含字段编码、多级嵌套、联动关系图） |
 | Demo 交互流程 | `docs/visa-demo-spec.md` | 5 步流程交互说明 |
 | 架构说明 | `docs/ARCHITECTURE.md` | 系统架构设计 |
 | 表单类型定义 | `client/src/types/application.ts` | TypeScript 类型（100+ fields） |
