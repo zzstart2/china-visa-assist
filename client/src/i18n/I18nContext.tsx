@@ -5,6 +5,7 @@ interface I18nContextType {
   lang: Lang;
   t: (key: string, params?: Record<string, string | number>) => string;
   toggleLang: () => void;
+  setLanguage: (lang: Lang) => void;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -14,6 +15,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const toggleLang = useCallback(() => {
     setLang(prev => prev === 'en' ? 'zh' : 'en');
+  }, []);
+
+  const setLanguage = useCallback((l: Lang) => {
+    setLang(l);
   }, []);
 
   const t = useCallback((key: string, params?: Record<string, string | number>) => {
@@ -27,7 +32,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [lang]);
 
   return (
-    <I18nContext.Provider value={{ lang, t, toggleLang }}>
+    <I18nContext.Provider value={{ lang, t, toggleLang, setLanguage }}>
       {children}
     </I18nContext.Provider>
   );

@@ -1,170 +1,249 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVisa } from '../context/VisaContext';
-import { useI18n } from '../i18n/I18nContext';
+import type { DocumentStatus, DocumentType, ApplicationForm } from '../types/application';
+import { createMockPrefill, createEmptyForm } from '../constants/formDefaults';
 import './Step2.css';
 
-interface UploadedFile {
-  file: File;
-  name: string;
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+/** M-visa required document checklist */
+function getInitialChecklist(_lang: 'en' | 'zh'): DocumentStatus[] {
+  return [
+    { type: 'passport', label: 'Passport photo page', labelZh: '护照信息页', mandatory: true, uploaded: false, valid: false },
+    { type: 'photo', label: 'Application photo (white bg)', labelZh: '申请照片（白底）', mandatory: true, uploaded: false, valid: false },
+    { type: 'invitation', label: 'Business invitation letter', labelZh: '商务邀请函', mandatory: true, uploaded: false, valid: false },
+    { type: 'employment', label: 'Employment certificate', labelZh: '在职证明', mandatory: false, uploaded: false, valid: false },
+    { type: 'previousVisa' as DocumentType, label: 'Previous Chinese visa copy', labelZh: '旧中国签证复印件', mandatory: false, uploaded: false, valid: false },
+    { type: 'residence', label: 'Residence permit', labelZh: '居住证明', mandatory: false, uploaded: false, valid: false },
+  ];
 }
 
-interface ValidationResult {
-  document: string;
-  status: 'pass' | 'fail';
-  message: string;
+/** Compute which fields are still empty after prefill */
+function computePendingFields(form: ApplicationForm): string[] {
+  const pending: string[] = [];
+  const s1 = form.section1;
+  // Section 1 key fields
+  if (!s1.familyName.value) pending.push('section1.familyName');
+  if (!s1.givenName.value) pending.push('section1.givenName');
+  if (!s1.birthDate.year) pending.push('section1.birthDate');
+  if (!s1.gender) pending.push('section1.gender');
+  if (!s1.birthCountry) pending.push('section1.birthCountry');
+  if (!s1.maritalStatus) pending.push('section1.maritalStatus');
+  if (!s1.currentNationality) pending.push('section1.currentNationality');
+  if (!s1.passportNumber) pending.push('section1.passportNumber');
+
+  // Section 5 contact
+  const s5 = form.section5;
+  if (!s5.currentAddress) pending.push('section5.currentAddress');
+  if (!s5.phone) pending.push('section5.phone');
+  if (!s5.mobilePhone) pending.push('section5.mobilePhone');
+  if (!s5.email) pending.push('section5.email');
+
+  // Section 6 travel
+  const s6 = form.section6;
+  if (!s6.inviter.name) pending.push('section6.inviter.name');
+  if (!s6.inviter.phone) pending.push('section6.inviter.phone');
+  if (!s6.emergencyContact.familyName.value) pending.push('section6.emergencyContact.familyName');
+  if (!s6.emergencyContact.phone) pending.push('section6.emergencyContact.phone');
+  if (!s6.travelPayBy) pending.push('section6.travelPayBy');
+
+  // Section 3 work
+  const s3 = form.section3;
+  if (!s3.currentOccupation) pending.push('section3.currentOccupation');
+
+  // Section 4 education
+  if (form.section4.entries.length === 0 && !form.section4.notApplicable) pending.push('section4.entries');
+
+  return pending;
 }
 
 function Step2() {
   const navigate = useNavigate();
-  const { t } = useI18n();
-  const { state, setUploadedFiles } = useVisa();
-  const { visaType } = state;
+  const { state, setDocuments, mergeForm, setPendingFields, setFilledFields } = useVisa();
+  const lang = state.language;
 
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
-  const [showValidation, setShowValidation] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [checklist, setChecklist] = useState<DocumentStatus[]>(getInitialChecklist(lang));
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadDone, setUploadDone] = useState(false);
+  const [prefillSummary, setPrefillSummary] = useState<{ filled: string[]; pending: string[] } | null>(null);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const handleFiles = (newFiles: FileList | null) => {
-    if (!newFiles) return;
-    const added = Array.from(newFiles).map(f => ({ file: f, name: f.name }));
-    const updated = [...files, ...added];
-    setFiles(updated);
+  const mandatoryDone = checklist.filter(d => d.mandatory).every(d => d.uploaded);
+  const anyUploaded = checklist.some(d => d.uploaded);
 
-    // Silently attempt upload to API, treat failures as success in mock mode
-    added.forEach(({ file }) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      fetch('/api/upload', { method: 'POST', body: formData }).catch(() => {});
+  const handleFileSelect = useCallback((docType: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setChecklist(prev => prev.map(d =>
+      d.type === docType ? { ...d, uploaded: true, valid: false, file: files[0] } : d
+    ));
+  }, []);
+
+  const removeFile = useCallback((docType: string) => {
+    setChecklist(prev => prev.map(d =>
+      d.type === docType ? { ...d, uploaded: false, valid: false, file: undefined } : d
+    ));
+  }, []);
+
+  const handleBatchUpload = async () => {
+    setIsUploading(true);
+
+    // Build FormData with all uploaded files
+    const formData = new FormData();
+    checklist.filter(d => d.uploaded && d.file).forEach(d => {
+      formData.append('files', d.file!, d.file!.name);
     });
 
-    const fileMap: Record<string, File[]> = {};
-    updated.forEach(({ file }) => {
-      const key = file.name;
-      fileMap[key] = [file];
-    });
-    setUploadedFiles(fileMap);
+    try {
+      const res = await fetch(`${API}/api/upload/batch`, { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.success) {
+        // Mark all uploaded docs as valid
+        setChecklist(prev => prev.map(d => d.uploaded ? { ...d, valid: true } : d));
+
+        // Apply prefill to ApplicationForm
+        const prefill = data.prefillData || createMockPrefill();
+        const mergedForm: ApplicationForm = { ...createEmptyForm(), ...prefill };
+        mergeForm(prefill as Partial<ApplicationForm>);
+
+        const pending = computePendingFields(mergedForm);
+        const allFields = Object.keys(flattenObj(mergedForm));
+        const filled = allFields.filter(f => !pending.includes(f));
+        setPendingFields(pending);
+        setFilledFields(filled);
+
+        setPrefillSummary({ filled: filled.slice(0, 10), pending });
+        setDocuments(checklist.filter(d => d.uploaded));
+        setUploadDone(true);
+      }
+    } catch {
+      // Fallback: use local mock
+      setChecklist(prev => prev.map(d => d.uploaded ? { ...d, valid: true } : d));
+      const prefill = createMockPrefill();
+      mergeForm(prefill as Partial<ApplicationForm>);
+      const mergedForm: ApplicationForm = { ...createEmptyForm(), ...prefill };
+      const pending = computePendingFields(mergedForm);
+      setPendingFields(pending);
+      setPrefillSummary({ filled: [], pending });
+      setDocuments(checklist.filter(d => d.uploaded));
+      setUploadDone(true);
+    }
+
+    setIsUploading(false);
   };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleFiles(e.dataTransfer.files);
-  };
-
-  const removeFile = (index: number) => {
-    const updated = files.filter((_, i) => i !== index);
-    setFiles(updated);
-  };
-
-  const handleValidateAll = () => {
-    setIsValidating(true);
-    setShowValidation(true);
-
-    setTimeout(() => {
-      setValidationResults(files.map(f => ({
-        document: f.name,
-        status: 'pass' as const,
-        message: t('step2.validated'),
-      })));
-      setIsValidating(false);
-    }, 500);
-  };
-
-  const allPassed = validationResults.length > 0 && validationResults.every(r => r.status === 'pass');
-
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  if (!visaType) {
-    return (
-      <div className="step2-container">
-        <div className="step2-empty">
-          <p>{t('step2.goBack')}</p>
-          <button onClick={() => navigate('/step/1')}>{t('step2.goStep1')}</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="step2-container">
       <div className="step2-header">
-        <h2>{t('step2.title')}</h2>
-        <p className="visa-type-badge">{visaType === 'M' ? t('step2.mBadge') : t('step2.gBadge')}</p>
+        <h2>{lang === 'en' ? 'Step 2: Document Upload' : '第二步：材料上传'}</h2>
+        <span className="visa-type-badge">M Visa</span>
       </div>
 
-      <div
-        className={`batch-upload-zone ${isDragging ? 'dragging' : ''}`}
-        onClick={() => inputRef.current?.click()}
-        onDrop={handleDrop}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          onChange={(e) => handleFiles(e.target.files)}
-          style={{ display: 'none' }}
-        />
-        <div className="upload-icon-large">+</div>
-        <p className="upload-title">{t('step2.upload')}</p>
-        <p className="upload-subtitle">Drag & drop multiple files here, or click to browse</p>
-      </div>
-
-      {files.length > 0 && (
-        <div className="uploaded-files-list">
-          <h3>{files.length} file{files.length !== 1 ? 's' : ''} uploaded</h3>
-          {files.map((item, index) => (
-            <div key={index} className="uploaded-file-row">
-              <span className="file-icon-small">&#128196;</span>
-              <div className="file-details">
-                <span className="file-name">{item.name}</span>
-                <span className="file-size">{formatSize(item.file.size)}</span>
-              </div>
-              <button className="file-remove-btn" onClick={(e) => { e.stopPropagation(); removeFile(index); }}>&times;</button>
+      {/* Document Checklist */}
+      <div className="doc-checklist">
+        <h3>{lang === 'en' ? 'Document Checklist' : '材料清单'}</h3>
+        {checklist.map(doc => (
+          <div key={doc.type} className={`doc-row ${doc.uploaded ? (doc.valid ? 'valid' : 'uploaded') : ''}`}>
+            <div className="doc-status-icon">
+              {doc.valid ? '✅' : doc.uploaded ? '📎' : doc.mandatory ? '🔴' : '⚪'}
             </div>
-          ))}
-        </div>
-      )}
+            <div className="doc-info">
+              <span className="doc-name">{lang === 'en' ? doc.label : doc.labelZh}</span>
+              <span className="doc-tag">{doc.mandatory
+                ? (lang === 'en' ? 'Required' : '必须')
+                : (lang === 'en' ? 'Optional' : '可选')}</span>
+            </div>
+            <div className="doc-action">
+              {doc.uploaded ? (
+                <>
+                  <span className="file-name-small">{doc.file?.name}</span>
+                  <button className="remove-btn" onClick={() => removeFile(doc.type)} disabled={uploadDone}>×</button>
+                </>
+              ) : (
+                <>
+                  <input
+                    ref={el => { inputRefs.current[doc.type] = el; }}
+                    type="file"
+                    accept="image/*,.pdf"
+                    style={{ display: 'none' }}
+                    onChange={e => handleFileSelect(doc.type, e.target.files)}
+                  />
+                  <button
+                    className="upload-btn-small"
+                    onClick={() => inputRefs.current[doc.type]?.click()}
+                    disabled={uploadDone}
+                  >
+                    {lang === 'en' ? 'Upload' : '上传'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
 
-      {files.length > 0 && !showValidation && (
-        <div className="validation-action">
-          <button className="validate-btn" onClick={handleValidateAll} disabled={isValidating}>
-            {isValidating ? t('step2.validating') : t('step2.validate')}
+      {/* Upload & Process button */}
+      {anyUploaded && !uploadDone && (
+        <div className="upload-action">
+          <button
+            className="process-btn"
+            onClick={handleBatchUpload}
+            disabled={!mandatoryDone || isUploading}
+          >
+            {isUploading
+              ? (lang === 'en' ? '⏳ Processing & Extracting...' : '⏳ 处理并提取中...')
+              : mandatoryDone
+                ? (lang === 'en' ? '🔍 Upload & Extract Information' : '🔍 上传并提取信息')
+                : (lang === 'en' ? 'Please upload all required documents' : '请上传所有必须材料')}
           </button>
         </div>
       )}
 
-      {showValidation && (
-        <div className="validation-results">
-          <h3>{t('step2.results')}</h3>
-          {validationResults.map((result, index) => (
-            <div key={index} className={`result-item ${result.status}`}>
-              <span className="result-icon">{result.status === 'pass' ? '\u2713' : '\u2717'}</span>
-              <span className="result-doc">{result.document}</span>
-              <span className="result-message">{result.message}</span>
+      {/* Prefill Summary */}
+      {uploadDone && prefillSummary && (
+        <div className="prefill-summary">
+          <div className="prefill-header">
+            <span className="prefill-icon">📋</span>
+            <h3>{lang === 'en' ? 'OCR Extraction Result' : 'OCR 提取结果'}</h3>
+          </div>
+          <div className="prefill-stats">
+            <div className="stat-card filled">
+              <span className="stat-number">{prefillSummary.filled.length}</span>
+              <span className="stat-label">{lang === 'en' ? 'Fields Prefilled' : '已预填字段'}</span>
             </div>
-          ))}
-
-          {allPassed && (
-            <div className="continue-action">
-              <button className="continue-btn" onClick={() => navigate('/step/3')}>
-                {t('step2.continue')}
-              </button>
+            <div className="stat-card pending">
+              <span className="stat-number">{prefillSummary.pending.length}</span>
+              <span className="stat-label">{lang === 'en' ? 'Fields Remaining' : '待填字段'}</span>
             </div>
-          )}
+          </div>
+          <p className="prefill-hint">
+            {lang === 'en'
+              ? 'The AI assistant will help you complete the remaining fields in the next step.'
+              : 'AI 助手将在下一步帮您补充剩余字段。'}
+          </p>
+          <button className="continue-btn" onClick={() => navigate('/step/3')}>
+            {lang === 'en' ? 'Continue to AI Assistant →' : '继续 AI 填表 →'}
+          </button>
         </div>
       )}
     </div>
   );
+}
+
+/** Flatten nested object to dot-path keys (shallow, for counting) */
+function flattenObj(obj: any, prefix = ''): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const key of Object.keys(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    const val = obj[key];
+    if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof File)) {
+      Object.assign(result, flattenObj(val, path));
+    } else {
+      result[path] = val;
+    }
+  }
+  return result;
 }
 
 export default Step2;
