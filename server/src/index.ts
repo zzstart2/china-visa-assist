@@ -1,3 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config({ path: "/root/.openclaw/.env" });
+import dotenv from 'dotenv';
+dotenv.config({ path: '/root/.openclaw/.env' });
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import multer from 'multer';
